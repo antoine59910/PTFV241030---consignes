@@ -1,0 +1,171 @@
+{
+  "indent": 4,
+  "PrototypeCheck": true,
+  "NoOCCURS": true,
+  "NoSELECTAll": true,
+  "UselessOperationCheck": false,
+  "UppercaseConstants": true,
+  "IncorrectVariableCase": true,
+  "RequiresParameter": true,
+  "RequiresProcedureDescription": true,
+  "StringLiteralDupe": false,
+  "RequireBlankSpecial": false,
+  "CopybookDirective": "include",
+  "UppercaseDirectives": true,
+  "NoGlobalsInProcedures": false,
+  "SpecificCasing": [
+    {
+      "operation": "%timestamp",
+      "expected": "*TimeStamp"
+    },
+    {
+      "operation": "Dcl-S",
+      "expected": "Dcl-S"
+    },
+    {
+      "operation": "Dcl-F",
+      "expected": "Dcl-F"
+    },
+    {
+      "operation": "Dcl-C",
+      "expected": "Dcl-C"
+    },
+    {
+      "operation": "Dcl-Ds",
+      "expected": "Dcl-Ds"
+    },
+    {
+      "operation": "END-DS",
+      "expected": "End-Ds"
+    },
+    {
+      "operation": "Dcl-Pi",
+      "expected": "Dcl-Pi"
+    },
+    {
+      "operation": "END-Pi",
+      "expected": "End-Pi"
+    },
+    {
+      "operation": "Dcl-Proc",
+      "expected": "Dcl-Proc"
+    },
+    {
+      "operation": "end-Proc",
+      "expected": "End-Proc"
+    },
+    {
+      "operation": "Dcl-Pr",
+      "expected": "Dcl-Pr"
+    },
+    {
+      "operation": "end-Pr",
+      "expected": "End-Pr"
+    },
+    {
+      "operation": "Dcl-Parm",
+      "expected": "Dcl-Parm"
+    },
+    {
+      "operation": "/INCLUDE",
+      "expected": "/INCLUDE"
+    },
+    {
+      "operation": "/DECLARE",
+      "expected": "/DECLARE"
+    },
+    {
+      "operation": "/DEFINE",
+      "expected": "/DEFINE"
+    },
+    {
+      "operation": "/Undefine",
+      "expected": "/UNDEFINE"
+    },
+    {
+      "operation": "Exec SQL",
+      "expected": "Exec SQL"
+    },
+    {
+      "operation": "ENDSL",
+      "expected": "EndSl"
+    },
+    {
+      "operation": "Select",
+      "expected": "Select"
+    },
+    {
+      "operation": "Chain",
+      "expected": "Chain"
+    },
+    {
+      "operation": "For",
+      "expected": "For"
+    },
+    {
+      "operation": "To",
+      "expected": "To"
+    },
+    {
+      "operation": "%Found",
+      "expected": "%Found"
+    },
+    {
+      "operation": "And",
+      "expected": "And"
+    },
+    {
+      "operation": "Or",
+      "expected": "Or"
+    },
+    {
+      "operation": "DoW",
+      "expected": "DoW"
+    },
+    {
+      "operation": "EndDo",
+      "expected": "EndDo"
+    },
+    {
+      "operation": "If",
+      "expected": "If"
+    },
+    {
+      "operation": "EndIf",
+      "expected": "EndIf"
+    },
+    {
+      "operation": "Return",
+      "expected": "Return"
+    },
+    {
+      "operation": "*Off",
+      "expected": "*Off"
+    },
+    {
+      "operation": "*On",
+      "expected": "*On"
+    },
+    {
+      "operation": "Char",
+      "expected": "Char"
+    },
+    {
+      "operation": "Zoned",
+      "expected": "Zoned"
+    }
+  ],
+  "NoSQLJoins": true,
+  "PrettyComments": false,
+  "NoUnreferenced": true,
+  "SQLHostVarCheck": true,
+  "RequireOtherBlock": true,
+  "NoGlobalSubroutines": true,
+  "NoExternalTo": [
+    "QCMD",
+    "QP2TERM",
+    "QSH",
+    "SYSTEM",
+    "QCMDEXC"
+  ]
+}
