@@ -1,0 +1,129 @@
+**free
+//*---------------------------------------------------------------*
+//          NOM: RPG_PSDS                  TYPE: Batch
+//
+//          Titre: Data structure des status du progame (PSDS)
+//
+//          ECRIT DU : 08/06/2022        PAR : ANg (Antilles Glaces)
+//                     AU : 08/06/2022
+//*---------------------------------------------------------------*
+// Copie du site internet :
+// https://www.volubis.fr/bonus/RPGDSF.HTM
+//*---------------------------------------------------------------*
+// Définition IBM :
+//The file feedback information starts in position 1 and ends in position 80
+//in the file information data structure. The file feedback information contains
+//data about the file which is specific to RPG. This includes information about
+//the error/exception that identifies:
+//
+//  -  The name of the file for which the exception/error occurred
+//  -  The record being processed when the exception/error occurred
+//      or the record that caused the exception/error
+//  -  The last operation being processed when the exception/error occurred
+//  -  The status code
+//  -  The RPG IV routine in which the exception/error occurred.
+//*---------------------------------------------------------------*
+
+
+Dcl-Ds fichierDS qualified;
+  //
+  //    INFOS FICHIER
+  //
+    nomfichier CHAR(8)   POS(1);
+    fichier_open IND     POS(9); // *on = 'Oui'
+    fichier_eof  IND     POS(10); // *on = 'Oui'
+    fichier_status ZONED(5:0) POS(11); // comme %status
+    code_operation CHAR(6)    POS(16);
+    routine        CHAR(8)    POS(22);
+    numero_sequence  CHAR(8)  POS(30);
+    format CHAR(8)            POS(38);
+    erreur CHAR(7)            POS(46);
+
+  //   OPEN FEEDBACK AREA
+    type_odp CHAR(2)   POS(81); // DS = Device, DB = Database, SP = SPool
+    fichier_ouvert  CHAR(10)  POS(83); // fichier réellement ouvert (EXTFILE ou OVRDBF)
+    bibliotheque    CHAR(10)  POS(93);
+    SplNbr ZONED(5:0) POS(123);
+    lg_maxi INT(10)    POS(125);
+    Membre CHAR(10)    POS(129);
+    nb_de_lignes INT(5)POS(152);
+    nb_de_colonne INT(5) POS(154);
+    nb_enregs INT(10)    POS(156); // nb de lignes lors de l'Open
+    type_acces CHAR(2)   POS(160); // KU=Keyed Unique, KF=Keyed Fifo, KL=Keyed Lifo, AR=
+    cle_dupliquee CHAR(1) POS(162); // U (unique), D (dup)
+    source     CHAR(1)    POS(163); // Y = Oui
+    overflow   INT(5)     POS(188);
+
+  //  I-O FEEDBACK AREA  (partie commune)
+    nb_write  INT(10) POS(243);
+    nb_read   INT(10) POS(247);
+    nb_exfmt  INT(10) POS(251);
+    autreio   INT(10) POS(255);
+    dernier_format  CHAR(10) POS(261);
+    classe_unite    CHAR(2)  POS(271);
+    nom_unite       CHAR(10) POS(273);
+    lg_dernier      INT(10)  POS(283);
+
+  // I-O FEEDBACK AREA  (DSPF)
+    touchePresse CHAR(1)  POS(369);
+  // X'31'-X'3C' = F1 à F12,
+  // X'B1'-X'BC' = F13 à F24
+  // X'BD'       = CLEAR            X'F1'       = Entrée
+  // X'F4'/X'F5' = Rolldown/Rollup  X'F3'       = Aide
+  // X'F6'       = Print            x'F8'       = Home (pos 1)
+  // x'70'-x'7F' = EVENT-ID donné par le mot-clé MOUBTN(*xxx E00-E15)
+    ligne    INT(3) POS(370); // curseur : ligne
+    colonne  INT(3) POS(371); // curseur : colonne
+    rang_sfl INT(5) POS(376); // nombre total de rang du sous fichier
+    //comme nbrcd_sfl
+    premier_rang_affiche INT(5) POS(378); // placé dans SFLRCNBR on réaffiche même page
+    nbrcd_sfl INT(5) POS(380); //nombre total de rang du sous fichier
+    wlico     INT(5) POS(382); // position curseur, mais dans la fenêtre active
+    //Je sais pas à quoi il sert il est toujours à 0
+
+  // I-O FEEDBACK AREA  (PRTF)
+    ligne_en_cours  INT(5)  POS(367);
+    page_en_cours   INT(5)  POS(369);
+
+  // I-O FEEDBACK AREA  (DataBase)
+    lg_totale INT(10)  POS(367);
+    jdftval   CHAR(4)  POS(370); //chaque bit représente un fichier  0=Sans JDFTVAL, 1=A
+    offset_to_null  INT(5)  POS(375);
+    nbrcd_lock      INT(5)  POS(377);
+    nbr_de_cles     INT(5)  POS(387);
+    lg_cle          INT(5)  POS(393);
+    numero_membre   INT(5)  POS(395);
+    recno           INT(5)  POS(397);
+//valeur_cles     CHAR(???)   POS(400);
+//cles_nulles     CHAR(???)   POS(suivant offset_to_null);
+
+End-Ds;
+
+Dcl-C ENTREE const(x'F1');
+
+Dcl-C F1 const(x'31');
+Dcl-C F2 const(x'32');
+Dcl-C F3 const(x'33');
+Dcl-C F4 const(x'34');
+Dcl-C F5 const(x'35');
+Dcl-C F6 const(x'36');
+Dcl-C F7 const(x'37');
+Dcl-C F8 const(x'38');
+Dcl-C F9 const(x'39');
+Dcl-C F10 const(x'3A');
+Dcl-C F11 const(x'3B');
+Dcl-C F12 const(x'3C');
+
+Dcl-C F13 const(x'B1');
+Dcl-C F14 const(x'B2');
+Dcl-C F15 const(x'B3');
+Dcl-C F16 const(x'B4');
+Dcl-C F17 const(x'B5');
+Dcl-C F18 const(x'B6');
+Dcl-C F19 const(x'B7');
+Dcl-C F20 const(x'B8');
+Dcl-C F21 const(x'B9');
+Dcl-C F22 const(x'BA');
+Dcl-C F23 const(x'BB');
+Dcl-C F24 const(x'BC');
+

@@ -1,0 +1,134 @@
+     A          R GESTIONBAS
+     A                                 23  3'F2=Utilisateur'
+     A                                      COLOR(BLU)
+     A                                 23 19'F3=Fin'
+     A                                      COLOR(BLU)
+     A                                 23 40'F6=Services'
+     A                                      COLOR(BLU)
+     A                                 23 52'F12=Abandon'                       
+     A                                      COLOR(BLU)
+     A                                 23 69' '
+     A                                      COLOR(BLU)
+     A            E2MSGERR      30     22  3ALIAS(ECRAN2MESSAGEERREUR)
+     A                                      COLOR(RED)
+     A                                      DSPATR(RI)
+     A  82                                  DSPATR(ND)
+     A            E2MSGINFO     40     22 41ALIAS(ECRAN2MESSAGEINFO)
+     A                                      DSPATR(RI)
+     A  83                                  DSPATR(ND)
+     A                                      COLOR(TRQ)
+     A            EVEOBJ        10A    24 70COLOR(PNK)
+     A                                      ALIAS(ECRANVERBEOBJET)
+     A                                 23 27'F4=Recherche'                      
+     A                                      COLOR(BLU)                          
+     A                                 24  3'F23=Recherche multicritères'       
+     A                                      COLOR(BLU)                          
+     A          R GESTIONCTL                SFLCTL(GESTIONSFL)
+     A  51                                  SFLDSP
+     A  52                                  SFLDSPCTL
+     A  53                                  SFLCLR
+     A  54                                  SFLEND(*SCRBAR *MORE)
+     A                                      SFLPAG(13)
+     A                                      SFLSIZ(100)
+     A                                      OVERLAY
+     A                                      CF02(01 'Utilisateur')
+     A                                      CF06(06 'Services')
+     A                                      CA12(12 'Abandon')
+     A                                      CA03(03 'Fin')
+     A                                      CF09(09 'Création UT')
+     A            ERDNB2         4S 0B  2  5SFLRCDNBR
+     A                                      DSPATR(ND)
+     A                                      DSPATR(PR)
+     A                                      ALIAS(ECRANLIGNESOUSFICHIER)
+     A            ELISTE        20A     1  2ALIAS(ECRANLIBELLESOCIETE)
+     A            ELIACT        30A     1 29DSPATR(HI)
+     A                                      ALIAS(ECRANLIBELLEACTION)
+     A                                  1 73DATE
+     A                                      EDTCDE(Y)
+     A                                  2 73TIME
+     A                                  4  4'N° LIV:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  4 38'TOU:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  6  8'CDE ART'                           
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                      COLOR(YLW)
+     A                                  6 29'Libellé 1'                         
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  4 21'N° FAC:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            ECDARF        20   I  7  8COLOR(YLW)
+     A                                      ALIAS(ECRANCODEARTICLEFILTRE)       
+     A                                      TEXT('Filtre sur le code article')  
+     A            ELIARF        30   I  7 29COLOR(YLW)
+     A                                      ALIAS(ECRANLIBELLE1ARTICLEFILTRE)   
+     A                                      TEXT('Filtre sur le libellé1 articl-
+     A                                      e')                                 
+     A                                  7  2'FILTR'
+     A                                      COLOR(YLW)
+     A            ECDCLI         9   O  3  4
+     A                                      ALIAS(ECRANCODECLIENT)
+     A                                      TEXT('Code client')
+     A                                      COLOR(WHT)
+     A            ECLRSO        30   O  3 15
+     A                                      ALIAS(ECRANRAISONSOCIALECLIENT)
+     A                                      TEXT('Raison sociale du client')
+     A                                      COLOR(WHT)
+     A            ECLCOM        30   O  3 46ALIAS(ECRANNOMCOMMERCIALCLIENT)
+     A                                      TEXT('Nom commercial du client')
+     A                                      COLOR(WHT)
+     A            ENUMLI         8Y 0O  4 11
+     A                                      ALIAS(ECRANNUMEROLIVRAISON)
+     A                                      TEXT('numéro de livraison')
+     A                                      COLOR(WHT)
+     A            ENUMFA         8Y 0O  4 28
+     A                                      ALIAS(ECRANNUMEROFACTURE)
+     A                                      TEXT('numéro de facture')
+     A                                      COLOR(WHT)
+     A            ENUTOU         2   O  4 42
+     A                                      ALIAS(ECRANNUMEROTOURNEE)
+     A                                      TEXT('Numéro de tournée')
+     A                                      COLOR(WHT)
+     A                                  4 46'Date LIV:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            EDALIV          L  O  4 55ALIAS(ECRANDATELIVRAISON)
+     A                                      DATFMT(*JOB)
+     A                                      COLOR(WHT)
+     A                                  4 65'N° Edition:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            ENUEDI         2Y 0   4 76ALIAS(ECRANNUMEROEDITION)
+     A                                      TEXT('Numéro édition')
+     A                                      COLOR(WHT)
+     A                                  6 61'QTE LIV'                           
+     A                                      DSPATR(UL)                          
+     A                                      COLOR(WHT)                          
+     A                                  6 70'QTE RET'                           
+     A                                      DSPATR(UL)                          
+     A                                      COLOR(WHT)                          
+     A          R GESTIONSFL                SFL
+     A            ELCDAR        20   O  8  8ALIAS(ECRANLIGNECODEARTICLE)        
+     A                                      TEXT('Sous fichier : Code article') 
+     A            ELLIAR        30      8 29ALIAS(ECRANLIGNELIBELLE1ARTICLE)    
+     A                                      TEXT('Sous fichier : Libellé 1 arti-
+     A                                      cle')                               
+     A            ELQLIV         4Y 0B  8 61ALIAS(ECRANLIGNEQUANTITELIVREE)     
+     A                                      TEXT('Sous fichier : quantité livré-
+     A                                      e')                                 
+     A            ELQRET         4Y 0B  8 70ALIAS(ECRANLIGNEQUANTITERETOURNEE)  
+     A                                      TEXT('sous fichier : quantité retou-
+     A                                      r')                                 
+     A*%%RS+<record-sequences>
+     A*%%RS+ <sequence name="gestion consignes">
+     A*%%RS+  <device type="display" width="80" height="24" />
+     A*%%RS+  <record-write record-format="GESTIONBAS" />
+     A*%%RS+  <record-write record-format="GESTIONCTL" />
+     A*%%RS+  <record-write record-format="GESTIONSFL" />
+     A*%%RS+ </sequence>
+     A*%%RS </record-sequences> 

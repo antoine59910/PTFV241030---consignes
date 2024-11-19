@@ -1,0 +1,73 @@
+**free
+//*---------------------------------------------------------------*
+//          NOM: RPG_PSDS                  TYPE: Batch
+//
+//          Titre: Data structure des status du progame (PSDS)
+//
+//          ECRIT DU : 08/06/2022        PAR : ANg (Antilles Glaces)
+//                     AU : 08/06/2022
+//*---------------------------------------------------------------*
+// Copie du site internet :
+// https://www.rpgpgm.com/2019/06/new-subfields-added-to-program-status.html
+//*---------------------------------------------------------------*
+// Définition IBM :
+// A program status data structure (PSDS) can be defined to make
+//  program exception/error information available to an RPG IV program.
+//The PSDS must be defined in the main source section; therefore,
+//there is only one PSDS per module.
+//*---------------------------------------------------------------*
+//A data structure is defined as a PSDS by the PSDS keyword
+// in a free-form definition or by an S in position 23 of
+//  a fixed-form definition. A PSDS contains predefined
+//  subfields that provide you with information about the
+//  program exception/error that occurred. The location of
+//  the subfields in the PSDS is defined by special keywords or
+//   by predefined From and To positions. In order to access
+//   the subfields, you assign a name to each subfield.
+//   The keywords must be specified, left-adjusted
+//   in positions 26 through 39.
+//*---------------------------------------------------------------*
+
+Dcl-Ds psds psds qualified ;
+    Proc                  char(10) ;// Module or main procedure name
+    StsCde                zoned(5) ;// Status code
+    PrvStsCde             zoned(5) ;// Previous status
+    SrcLineNbr            char(8) ;// Source line number
+    Routine               char(8) ;// Name of the RPG routine
+    Parms                 zoned(3) ;// Number of parms passed to program
+    ExceptionType         char(3) ;// Exception type
+    ExceptionNbr          char(4) ;// Exception number
+    Exception             char(7) samepos(ExceptionType) ;
+    Reserved1             char(4) ;// Reserved
+    MsgWrkArea            char(30) ;// Message work area
+    PgmLib                char(10) ;// Program library
+    ExceptionData         char(80) ;// Retrieved exception data
+    Rnx9001Exception      char(4) ;// Id of exception that caused RNX9001
+    LastFile1             char(10) ;// Last file operation occurred on
+    Unused1               char(6) ;// Unused
+    DteEntered            char(8) ;// Date entered system
+    StrDteCentury         zoned(2) ;// Century of job started date
+    LastFile2             char(8) ;// Last file operation occurred on
+    LastFileSts           char(35) ;// Last file used status information
+    JobName               char(10) ;// Job name
+    JobUser               char(10) ;// Job user
+    JobNbr                zoned(6) ;// Job number
+    StrDte                zoned(6) ;// Job started date
+    PgmDte                zoned(6) ;// Date of program running
+    PgmTime               zoned(6) ;// Time of program running
+    CompileDte            char(6) ;// Date program was compiled
+    CompileTime           char(6) ;// Time program was compiled
+    CompilerLevel         char(4) ;// Level of compiler
+    SrcFile               char(10) ;// Source file name
+    SrcLib                char(10) ;// Source file library
+    SrcMbr                char(10) ;// Source member name
+    ProcPgm               char(10) ;// Program containing procedure
+    ProcMod               char(10) ;// Module containing procedure
+    SrcLineNbrBin         bindec(2) ;// Source line number as binary
+    LastFileStsBin        bindec(2) ;// Source id matching positions 228-235
+    User                  char(10) ;// Current user
+    ExtErrCode            int(10) ;// External error code
+    IntoElements          int(20) ;// Elements set by XML-INTO or DATA-INTO (7.3)
+    InternalJobId         char(16) ;// Internal job id (7.3 TR6)
+    SysName               char(8) ;// System name (7.3 TR6)
+End-Ds ;
