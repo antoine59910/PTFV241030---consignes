@@ -55,6 +55,15 @@
     "environment": "ile"
   },
   {
+    "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) TEXT('DSPF from local')",
+    "environment": "ile",
+    "type": "file",
+    "name": "Create Display File (CRTDSPF)",
+    "extensions": [
+      "dspf"
+    ]
+  },
+  {
     "extensions": [
       "GLOBAL"
     ],
