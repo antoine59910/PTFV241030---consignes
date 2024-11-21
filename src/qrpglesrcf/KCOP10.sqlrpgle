@@ -7,51 +7,51 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 //  ('Gestion livraison consignes' (*CHAR 30)))
 
 ///
-/// --------------------------------------------------------------
-///       NOM        : KCOP10              TYPE : Interactif
-///
-///  TITRE      : Suivi des articles consignés.: Gestion livraisons des consignes
-///
-///  FONCTIONS  :
-///              Gestion des livraisons et retours des consignes chez les clients.
-///              Appel du programme KCOP20 pour saisie de la livraison/retour des consignes
-///
-///              Touches de fonction :
-///                      F2 : Utilisateur
-///                      F3 : Fin
-///                      F6 : Services
-///                      F9 : Nouvelle livraison
-///
-///              Filtres disponibles (type "Commence par" et additionnel) :
-///                      - Numéro de livraison
-///                      - Numéro de facture
-///                      - Tournée
-///                      - Code client
-///                      - Désignation client (Filtre type "Contient")
-///                      - Date de livraison confirmée
-///              Option "Masquer les retours traités" (activée par défaut)
-///              pour n'afficher que les livraisons sans retour
-///
-///              Actions possibles sur les livraisons :
-///                      1 : Modifier une livraison
-///                      2 : Visualiser une livraison
-///                      3 : Créer un nouveau retour
-///                      4 : Modifier un retour
-///                      5 : Visualiser un retour
-///
-///  APPELE PAR : - Moniteur
-///
-///  PARAMETRES :
-/// - D'appel :
-///      - £CodeVerbe
-///      - £CodeObjet
-///      - £LibelleAction
-///
-/// - Retournés
-///
-///  ECRIT DU   : 11/11/2024            PAR : ANg (Antilles Glaces)
-///        AU   : 19/11/2024
-///
+// --------------------------------------------------------------
+//       NOM        : KCOP10              TYPE : Interactif
+//
+//  TITRE      : Suivi des articles consignés.: Gestion livraisons des consignes
+//
+//  FONCTIONS  :
+//              Gestion des livraisons et retours des consignes chez les clients.
+//              Appel du programme KCOP20 pour saisie de la livraison/retour des consignes
+//
+//              Touches de fonction :
+//                      F2 : Utilisateur
+//                      F3 : Fin
+//                      F6 : Services
+//                      F9 : Nouvelle livraison
+//
+//              Filtres disponibles (type "Commence par" et additionnel) :
+//                      - Numéro de livraison
+//                      - Numéro de facture
+//                      - Tournée
+//                      - Code client
+//                      - Désignation client (Filtre type "Contient")
+//                      - Date de livraison confirmée
+//              Option "Masquer les retours traités" (activée par défaut)
+//              pour n'afficher que les livraisons sans retour
+//
+//              Actions possibles sur les livraisons :
+//                      1 : Modifier une livraison
+//                      2 : Visualiser une livraison
+//                      3 : Créer un nouveau retour
+//                      4 : Modifier un retour
+//                      5 : Visualiser un retour
+//
+//  APPELE PAR : - Moniteur
+//
+//  PARAMETRES :
+// - D'appel :
+//      - £CodeVerbe
+//      - £CodeObjet
+//      - £LibelleAction
+//
+// - Retournés
+//
+//  ECRIT DU   : 11/11/2024            PAR : ANg (Antilles Glaces)
+//        AU   : 19/11/2024
+//
 /// ---------------------------------------------------------------------
 
 // Déclaration fichier
@@ -122,12 +122,12 @@ End-Pr ;
 Dcl-S CommandeCL VarChar(200);
 
 Dcl-S NombreTotalLignesSF Packed(4:0);
-Dcl-s Fin ind;
-dcl-ds Societe qualified;
-  Code Char(2);
-  Libelle Char(26);
-  BilbiothequeFichier Char(9);
-end-ds;
+Dcl-S Fin ind;
+Dcl-Ds Societe qualified;
+    Code Char(2);
+    Libelle Char(26);
+    BilbiothequeFichier Char(9);
+End-Ds;
 
 // --- Constantes -------------------------------------------------------
 Dcl-C CREATION 'CREATION';
@@ -202,27 +202,30 @@ EndDo;
 // Initialisations :
 // - Récupération Bibliothèque des fichiers & code société
 // - Création du userIndex si il n'existe pas
-// - TODO: Purge du fichier des blocages antérieurs à J-1
+// - Purge du fichier des blocages(KCOF10) antérieurs à J-1
 // - Initialisation de l'écran
 ///
 Dcl-Proc InitialisationProgramme;
 
     //Récupération du code société et de la bibliothèque des fichiers
     Societe.Code = GetCodeSociete();
-    Societe.Libelle = GetLibelleSociete(Societe.Code);
-    Societe.BilbiothequeFichier = GetBibliothequeFichierSociete(Societe.Code);
+    Societe.Libelle = GetLibelleSociete();
+    Societe.BilbiothequeFichier = GetBibliothequeFichierSociete();
 
-     If (Societe.Libelle = *BLANKS);
-            EcranLibelleSociete = *ALL'?';
-            Else;
-            EcranLibelleSociete = Societe.Libelle;
-        EndIf;
+    If (Societe.Libelle = *BLANKS);
+        EcranLibelleSociete = *ALL'?';
+    Else;
+        EcranLibelleSociete = Societe.Libelle;
+    EndIf;
 
     // Récupération du libellé de l'action
     EcranLibelleAction = £LibelleAction;
 
-    // Création du UserIndex s'il n'existe pas
-    CreationUserIndex(psds.Proc:BibliothequeFichier);
+    // Purge du fichier des blocages
+    // On supprime toutes les restrictions qui sont antiérieurs à la veille
+    Exec SQL
+    DELETE FROM KUTF30 WHERE StartTimestamp < CURRENT_DATE - 1 DAY;
+    GestionErreurSQL();
 
 End-Proc;
 
@@ -240,13 +243,12 @@ End-Proc;
 // La procédure renvoie le libellé de la société en fonction de son code
 // TABVV : STE
 //
-// @param Code de la société
 // @return Libellé de la société si erreur renvoi *ALL'?'
 ///
 
 Dcl-Proc GetLibelleSociete ;
     Dcl-Pi *n Char(20);
-        CodeSociete Char(2);
+
     End-Pi;
 
     Dcl-S LibelleSocieteReturn Char(20);
@@ -257,8 +259,7 @@ Dcl-Proc GetLibelleSociete ;
             Select SUBSTR(XLIPAR, 1, 26)
                 Into :LibelleSocieteReturn
                 FROM VPARAM
-                WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE
-                    AND XCOARG = :CodeSociete;
+                WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE;
     If SQLCode <> 0;
         GestionErreurSQL();
         LibelleSocieteReturn = *ALL'?';
@@ -268,6 +269,7 @@ Dcl-Proc GetLibelleSociete ;
 
 End-Proc;
 
+
 ///
 // GET Code société
 // La procédure renvoie le Code de la société
@@ -275,7 +277,6 @@ End-Proc;
 //
 // @return Code de la société si erreur renvoi *ALL'?'
 ///
-
 Dcl-Proc GetCodeSociete ;
     Dcl-Pi *n Char(2);
     End-Pi;
@@ -299,17 +300,15 @@ End-Proc;
 
 ///
 // GET Bibliotheque Fichier société
+//
 // La procédure renvoie la bibliotheque des fichiers utilisé dans la société (FIDVALSXX)
 // en fonction du code Société
 //
 // TABVV : STE
-// @param Code de la société
 // @return Bilbiotheque de fichier de la société si erreur renvoi *ALL'?'
 ///
-
 Dcl-Proc GetBibliothequeFichierSociete ;
     Dcl-Pi *n Char(10);
-        CodeSociete Char(2);
     End-Pi;
 
     Dcl-S BibliothequeFichierReturn Char(10);
