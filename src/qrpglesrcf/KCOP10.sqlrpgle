@@ -15,6 +15,8 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 //  FONCTIONS  :
 //              Gestion des livraisons et retours des consignes chez les clients.
 //              Appel du programme KCOP20 pour saisie de la livraison/retour des consignes
+//              Le sous-fichier est chargé en fonction de la table KCOENT pour les entêtes des liv-
+//              raisons
 //
 //              Touches de fonction :
 //                      F2 : Utilisateur
@@ -78,10 +80,10 @@ Dcl-F KCOP10E  WorkStn
 // ECRANCODECLIENTFILTRE packed(9:0);      // Filtre sur le code client
 // ECRANDESIGNATIONCLIENTFILTRE char(30);  // Filtre sur la désignation du client
 // ECRANDATELIVRAISONFILTRE date;          // Filtre sur la date de livraison
-// ECRANAFFICHERLIVRAISONFILTRE char(1);   // Filtre pour afficher ou masquer les livraisons
+// ECRANLIVRAISSANSRETOURFILTRE char(1);   // Filtre pour masquer les livraisons sans retour
 
 // Variables du format GESTIONSFL
-// ECRANLIGNEOPTIONUT char(1);             // Option utilisateur sur la ligne
+// ECRANLIGNEACTION char(1);                // Option utilisateur sur la ligne
 // ECRANLIGNENUMEROLIVRAISON packed(8:0);  // Numéro de livraison de la ligne
 // ECRANLIGNEDESIGNATIONCLIENT char(30);   // Désignation du client de la ligne
 // ECRANLIGNENUMEROFACTURE packed(8:0);    // Numéro de facture de la ligne
@@ -90,20 +92,14 @@ Dcl-F KCOP10E  WorkStn
 // ECRANLIGNEDATELIVRAISON date;           // Date de livraison de la ligne
 
 // --- Appels de prototypes et de leurs DS-------------------------------
-// Permet de faire des commandes CL
-Dcl-Pr QCMDEXC ExtPgm('QCMDEXC') ;
-    cde Char(200) const;
-    cdl Packed(15:5) const;
-End-Pr ;
-
 // Prototype des programmes appelés
-Dcl-Pr KCOP20 ExtPgm;
-    NumeroLivraison Packed(7:0) const;
-    Mode Char(13) const;//Livraison ou retour
-    Droits Char(13) const;//Visualiser, modifier, créer,...
-    CodeSociete Char(2) const;
-    ReturnOperationEffectuee char(1);
-End-Pr ;
+// Dcl-Pr KCOP20 ExtPgm;
+//     NumeroLivraison Packed(7:0) const;
+//     Mode Char(13) const;//Livraison ou retour
+//     Droits Char(13) const;//Visualiser, modifier, créer,...
+//     CodeSociete Char(2) const;
+//     ReturnOperationEffectuee char(1);
+// End-Pr ;
 
 // Recherche valeur table chartreuse
 /DEFINE PR_VORPAR
@@ -119,30 +115,33 @@ End-Pr ;
 /UNDEFINE PR_GOASER
 
 // --- Variables -------------------------------------------------------
-Dcl-S CommandeCL VarChar(200);
-
 Dcl-S NombreTotalLignesSF Packed(4:0);
 Dcl-S Fin ind;
+Dcl-S Refresh ind;
 Dcl-Ds Societe qualified;
     Code Char(2);
     Libelle Char(26);
     BilbiothequeFichier Char(9);
 End-Ds;
 
+Dcl-Ds ParametresConsignes qualified;
+    XLIPAR Char(100);
+    TypeArticle Char(1) Overlay(XLIPAR);
+    CodeMouvement Char(2) Overlay(XLIPAR:*NEXT);
+    TopPrealimentationRetour Char(1) Overlay(XLIPAR:*NEXT);
+    NombreExemplairesBL Packed(2:0) Overlay(XLIPAR:*NEXT);
+End-Ds;
+
+
 // --- Constantes -------------------------------------------------------
 Dcl-C CREATION 'CREATION';
 Dcl-C MODIFICATION 'MODIFICATION';
 Dcl-C VISUALISATION 'VISUALISATION';
+Dcl-C TABVV_PARAMETRESCONSIGNES 'XCOPAR';
 
-
-// --- Data-structures Ecran    --------------------------------------
-Dcl-Ds DSPFSauve Qualified;
-    Totalite                                Char(4000);
-    Element                                 Char(80) Dim(50) Overlay(Totalite);
-    Clef                                    Char(30) Overlay(Element);
-    Valeur                                  Char(50) Overlay(Element:*Next);
+// --- Tables -------------------------------------------------------
+Dcl-Ds KCOENT_t extname('KCOENT') qualified template;
 End-Ds;
-
 
 // --- Data-structures Indicateurs--------------------------------------
 Dcl-Ds Indicateur qualified;
@@ -151,6 +150,10 @@ Dcl-Ds Indicateur qualified;
     SousFichierDisplayControl                       Ind Pos(52);
     SousFichierClear                                Ind Pos(53);
     SousFichierEnd                                  Ind Pos(54);
+
+    // Indicateurs d'affichage
+    MasquerMessageErreur                        Ind Pos(82);
+    MasquerMessageInfo                          Ind Pos(83);
 
 End-Ds ;
 
@@ -182,10 +185,23 @@ End-Pi ;
 // Initialisation du programme
 InitialisationProgramme();
 
+
+// Chargement initial du sous-fichier
+ChargerSousFichier();
+
 Fin = *Off;
 DoW not Fin;
+    AffichageEcran();
 
-    Fin=*On;
+    // Traitement des actions
+    Action();
+
+    // Si rafraîchissement nécessaire, rechargement du sous-fichier
+    If Refresh;
+        ChargerSousFichier();
+        Refresh = *Off;
+    EndIf;
+    
 EndDo;
 
 *Inlr=*On;
@@ -198,36 +214,283 @@ EndDo;
 // ----------------------------------------------------------------------------
 
 ///
-// Initialisation du programme
-// Initialisations :
-// - Récupération Bibliothèque des fichiers & code société
-// - Création du userIndex si il n'existe pas
-// - Purge du fichier des blocages(KCOF10) antérieurs à J-1
-// - Initialisation de l'écran
+// InitialisationProgramme()
+// ------------------------
+// Objectif : Initialise les variables et paramètres nécessaires au programSme
+//
+// Traitements : 
+// 1. Initialisation des variables globales
+//    - Indicateurs de fin de programme et de rafraîchissement
+//    - Message d'erreur
+//
+// 2. Récupération paramètres société
+//    - Code société (TABVV STE)
+//    - Libellé société 
+//    - Bibliothèque des fichiers
+//
+// 3. Chargement paramètres consignes
+//    - Lecture table XCOPAR pour paramètres consignes
+//
+// 4. Nettoyage des données temporaires
+//    - Purge du fichier des blocages (KUTF30) pour les enregistrements antérieurs à J-1
+//
+// 5. Initialisation de l'écran
+//    - Masquage des messages d'erreur et d'information
+//    - RAZ et préparation du sous-fichier (clear + display)
+//    - Définition des libellés (action, verbe/objet, société)
+//    - Initialisation des filtres à vide
+//    - Positionnement initial du curseur
+//
+// Paramètres : 
+//   Entrée : Aucun
+//   Sortie : Aucun
+//
+// Particularités :
+// - Le filtre 'Masquer les retours traités' est activé par défaut ('X')
+// - Message d'avertissement ('?') si le libellé société n'est pas trouvé
 ///
 Dcl-Proc InitialisationProgramme;
-
-    //Récupération du code société et de la bibliothèque des fichiers
+    Dcl-Pi *N;
+    End-Pi;
+    
+    //--- 1. Initialisation des variables globales ----------------------------
+    // Indicateurs de contrôle
+    Fin = *Off;                               // Indicateur de fin
+    Refresh = *Off;                           // Indicateur rafraîchissement
+    
+    //--- 2. Récupération paramètres société --------------------------------
+    // Récupération des informations société
     Societe.Code = GetCodeSociete();
     Societe.Libelle = GetLibelleSociete();
     Societe.BilbiothequeFichier = GetBibliothequeFichierSociete();
+    
+    //--- 3. Chargement paramètres consignes --------------------------------
+    // Lecture des paramètres dans XCOPAR
+    Exec SQL
+        Select XLIPAR
+        Into :ParametresConsignes.XLIPAR
+        FROM VPARAM
+        Where XCORAC = :TABVV_PARAMETRESCONSIGNES 
+        and XCOARG = :Societe.Code;
+    GestionErreurSQL();
+    
+    //--- 4. Nettoyage des données temporaires ------------------------------
+    // Purge des blocages antérieurs à J-1
+    Exec SQL
+        DELETE FROM KUTF30 
+        WHERE StartTimestamp < CURRENT_DATE - 1 DAY;
+    GestionErreurSQL();
+    
+    //--- 5. Initialisation de l'écran ------------------------------------
+    // Masquage des messages
+    Indicateur.MasquerMessageErreur = *On;
+    Indicateur.MasquerMessageInfo = *On;
 
-    If (Societe.Libelle = *BLANKS);
+    // Préparation du sous-fichier
+    Indicateur.SousFichierClear = *On;
+    Write GESTIONCTL;
+    Indicateur.SousFichierClear = *Off;
+    
+    Indicateur.SousFichierDisplay = *On;
+    Indicateur.SousFichierEnd = *On;
+    Indicateur.SousFichierDisplayControl = *On;
+    
+    // Définition des libellés
+    If Societe.Libelle = *Blanks;
         EcranLibelleSociete = *ALL'?';
     Else;
         EcranLibelleSociete = Societe.Libelle;
     EndIf;
-
-    // Récupération du libellé de l'action
     EcranLibelleAction = £LibelleAction;
-
-    // Purge du fichier des blocages
-    // On supprime toutes les restrictions qui sont antiérieurs à la veille
-    Exec SQL
-    DELETE FROM KUTF30 WHERE StartTimestamp < CURRENT_DATE - 1 DAY;
-    GestionErreurSQL();
+    EcranVerbeObjet = £CodeVerbe + £CodeObjet;
+    ECRANMESSAGEERREUR = *Blanks;             // Message d'erreur
+    ECRANMESSAGEINFO = *Blanks;               // Message d'information
+    
+    // Initialisation des filtres
+    ECRANLIVRAISSANSRETOURFILTRE = 'X';      // Filtre retours traités (activé par défaut)
+    ECRANNUMEROLIVRAISONFILTRE = 0;         // Filtre numéro livraison
+    ECRANNUMEROFACTUREFILTRE = 0;            // Filtre numéro facture  
+    ECRANNUMEROTOURNEEFILTRE = *Blanks;      // Filtre tournée
+    ECRANCODECLIENTFILTRE = *BLANKS;          // Filtre code client
+    ECRANDESIGNATIONCLIENTFILTRE = *Blanks;  // Filtre désignation client
+    ECRANDATELIVRAISONFILTRE = *LOVAL;      // Filtre date livraison
 
 End-Proc;
+
+///
+// ChargerSousFichier()
+// Charge le sous-fichier avec les données de KCOENT
+// Recherche num VENTLV
+// Initialise les positions d'affichage et le curseur
+///
+Dcl-Proc ChargerSousFichier;
+    Dcl-Pi *n ;
+    End-Pi;
+  
+    // Nettoyage initial du sous-fichier
+    Indicateur.SousFichierClear = *On;
+    Write GESTIONCTL;
+    Indicateur.SousFichierClear = *Off;
+
+    // Initialisation du rang
+    fichierDS.rang_sfl = 0;
+
+    // Préparation de la requête
+    Exec SQL 
+        DECLARE C1 CURSOR FOR
+        SELECT DISTINCT 
+            K.NUMEROLIVRAISON, 
+            V.ENUFAC,
+            V.ECOTRA,
+            V.ECOCLL,
+            C.CLISOC as DESIGNATION_CLIENT,
+            DATE(TIMESTAMP_ISO(
+                DIGITS(V.EXXDLV) CONCAT 
+                DIGITS(V.EAADLV) CONCAT '-' CONCAT 
+                DIGITS(V.EMMDLV) CONCAT '-' CONCAT 
+                DIGITS(V.EJJDLV)
+            )) as DATE_LIVRAISON
+        FROM FIDVALSAC.KCOENT K
+        LEFT JOIN FIDVALSAC.VENTLV V ON V.ENULIV = K.NUMEROLIVRAISON
+        LEFT JOIN FIDVALSAC.CLIENT C ON C.CCOCLI = V.ECOCLL
+        WHERE 1=1
+            AND (:ECRANNUMEROLIVRAISONFILTRE = 0 OR K.NUMEROLIVRAISON = :ECRANNUMEROLIVRAISONFILTRE)
+            AND (:ECRANNUMEROFACTUREFILTRE = 0 OR V.ENUFAC = :ECRANNUMEROFACTUREFILTRE)
+            AND (:ECRANNUMEROTOURNEEFILTRE = '' OR V.ECOTRA = :ECRANNUMEROTOURNEEFILTRE) 
+            AND (:ECRANCODECLIENTFILTRE = '' OR V.ECOCLL = :ECRANCODECLIENTFILTRE)
+            AND (:ECRANDESIGNATIONCLIENTFILTRE = '' OR UPPER(C.CLISOC) LIKE UPPER('%' CONCAT :ECRANDESIGNATIONCLIENTFILTRE CONCAT '%'))
+            AND (:ECRANDATELIVRAISONFILTRE = DATE('0001-01-01') 
+                OR DATE(TIMESTAMP_ISO(
+                    DIGITS(V.EXXDLV) CONCAT 
+                    DIGITS(V.EAADLV) CONCAT '-' CONCAT 
+                    DIGITS(V.EMMDLV) CONCAT '-' CONCAT 
+                    DIGITS(V.EJJDLV)
+                )) = :ECRANDATELIVRAISONFILTRE)
+        ORDER BY K.NUMEROLIVRAISON DESC;
+    GestionErreurSQL();
+
+    // Ouverture du curseur
+    Exec SQL OPEN C1;
+    GestionErreurSQL();
+
+    // Premier FETCH pour initialiser SQLCODE
+    Exec SQL 
+        FETCH NEXT FROM C1 
+        INTO :ECRANLIGNENUMEROLIVRAISON,
+             :ECRANLIGNENUMEROFACTURE,
+             :ECRANLIGNECODETOURNEE,
+             :ECRANLIGNECODECLIENT,
+             :ECRANLIGNEDESIGNATIONCLIENT,
+             :ECRANLIGNEDATELIVRAISON;
+    GestionErreurSQL();
+
+    // Lecture des données tant que SQLCODE = 0
+    DoW SQLCODE = 0;
+        // Incrémentation du rang
+        fichierDS.rang_sfl += 1;
+
+        // Initialisation des autres champs
+        ECRANLIGNEACTION = ' ';
+
+        // Écriture de la ligne dans le sous-fichier
+        Write GESTIONSFL;
+
+        // Lecture suivante
+        Exec SQL 
+            FETCH NEXT FROM C1 
+            INTO :ECRANLIGNENUMEROLIVRAISON,
+                 :ECRANLIGNENUMEROFACTURE,
+                 :ECRANLIGNECODETOURNEE,
+                 :ECRANLIGNECODECLIENT,
+                 :ECRANLIGNEDESIGNATIONCLIENT,
+                 :ECRANLIGNEDATELIVRAISON;
+        GestionErreurSQL();
+    EndDo;
+
+    // Fermeture du curseur
+    Exec SQL CLOSE C1;
+    GestionErreurSQL();
+
+    // Mémorisation du nombre total de lignes
+    NombreTotalLignesSF = fichierDS.rang_sfl;
+    
+    // Positionnement initial
+    EcranLigneSousFichier = 1;
+    EcranDeplacerCurseurLigne = 8;
+    EcranDeplacerCurseurColonne = 3;
+
+End-Proc;
+
+
+
+///
+// AffichageEcran
+// Gère l'affichage de l'écran et du sous-fichier
+///
+Dcl-Proc AffichageEcran;
+    // Pour afficher un sous-fichier vide, 
+    //on ne doit PAS activer l'affichage du sous-fichier s'il est vide 
+    If NombreTotalLignesSF > 0;
+        Indicateur.SousFichierDisplay = *On;
+    Else;
+        Indicateur.SousFichierDisplay = *Off;
+    EndIf;
+    
+    Indicateur.SousFichierDisplayControl = *On;
+    Indicateur.SousFichierEnd = *On;
+
+    // Affichage de l'écran avec attente de saisie
+    Write GestionBas;
+    ExFmt GESTIONCTL;
+End-Proc;
+
+
+///
+// Action
+// affichage écran
+///
+Dcl-Proc Action;
+    Select;
+        When fichierDS.TouchePresse = F2;
+            AffichageFenetreUtilisateur(£CodeVerbe:£CodeObjet);
+
+        When fichierDS.TouchePresse = F3;
+            Fin=*On;
+
+        When fichierDS.TouchePresse = F6;
+            AffichageFenetreServices();
+
+        When fichierDS.touchePresse = F9;
+            dsply 'nouvelle livraison';
+
+        When fichierDS.TouchePresse = F12;
+            Fin=*On;
+
+        When  fichierDS.touchePresse = ENTREE;
+            dsply 'entrée';
+            Refresh = *On;
+        Other;
+    EndSl;
+  
+End-Proc;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -363,3 +626,161 @@ Dcl-Proc GestionErreurSQL ;
 
     EndIf ;
 End-Proc;
+
+
+//                               Fenetre services & utilisateurs
+
+///
+// Appel de la fenêtre utilisateur
+// - Appel de la fenêtre utilisateur (par 'F2')
+///
+
+Dcl-Proc AffichageFenetreUtilisateur ;
+    Dcl-Pi *n;
+        CodeVerbe Char(3);
+        CodeObjet Char(5);
+    End-Pi;
+
+    PR_GOAFENCL(CodeVerbe
+         :CodeObjet);
+End-Proc;
+
+
+///
+// Appel du menu de services
+// - Appel du menu de services (par 'F6')
+///
+
+Dcl-Proc AffichageFenetreServices ;
+    PR_GOASER();
+End-Proc;
+
+///
+// InitialiseSousFichier
+// initialise les valeurs du sous-fichier
+// selon les filtres appliqués par l'utilisateur
+//  - Si des enregistrements existent, on initialise les valeurs du sous fichier
+// du second écran et on revoie true
+//  - Sinon, on fait rien et on renvoie false
+//
+// @Return : EnregistrementsTrouves Ind
+///
+
+// Dcl-Proc InitialiseSousFichier;
+//     Dcl-Pi *n Ind;
+//     End-Pi;
+
+//     Dcl-S Requete char(2048);
+//     Dcl-S EnregistrementsTrouves Ind Inz(*Off);
+
+//     Dcl-S ClauseSelect char(2048);
+//     Dcl-S ClauseFROM char(2048);
+//     Dcl-S ClauseWhere char(2048);
+//     Dcl-S ClauseOrderBy char(2048);
+
+//     Dcl-Ds KCOENT likeDs(KCOENT_t);
+//     Dcl-Ds DateLivraison qualified;
+//         jour char(2);
+//         mois char(2);
+//         annee char(2);
+//         siecle char(2);
+//     End-Ds;
+
+//     Dcl-C ESPACE ' ';
+
+//     ClauseSelect = 'SELECT DISTINCT NUMEROLIVRAISON, NUMEROFACTURE, NUMEROEDITION, '
+//     + 'LIVRAISONTIMESTAMP, LIVRAISONUTILISATEUR, TOPRETOUR, RETOURTIMESTAMP, RETOURUTILISATEUR';
+//     ClauseFROM = 'FROM KCOENT';
+//     //ClauseWhere = CreationClauseWhere();
+//     ClauseOrderBy = 'ORDER BY NUMEROLIVRAISON Desc ';
+
+//     Requete =
+//         %trimr(ClauseSelect) + ESPACE
+//         + %Trimr(ClauseFROM) + ESPACE
+//         //+ %Trimr(ClauseWhere) + ESPACE
+//         + %Trimr(ClauseOrderBy);
+
+//   // Préparation du curseur pour récupérer les résultats de la requête
+//     exec sql PREPARE S1 FROM :Requete;
+//     GestionErreurSQL();
+
+//   // Déclaration du curseur
+//     exec sql DECLARE C1 CURSOR FOR S1;
+//     GestionErreurSQL();
+
+//   // Ouverture du curseur
+//     exec sql OPEN C1;
+//     GestionErreurSQL();
+
+//   // Fetch
+//     exec sql FETCH FROM C1 INTO
+//             :KCOENT.NUMLIV,
+//             :KCOENT.NUMFAC,
+//             :KCOENT.NUMEDI,
+//             :KCOENT.LIVDAT,
+//             :KCOENT.LIVUSR,
+//             :KCOENT.TOPRET,
+//             :KCOENT.RETDAT,
+//             :KCOENT.RETUSR;
+//     If SQLCode = 100; //Aucun enregistrement n'a été trouvé
+    
+//     ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
+
+//         EnregistrementsTrouves = *On;
+
+//     // Remise à blanc du sous-fichier
+//         Indicateur.SousFichierClear = *On;
+//         Write GESTIONCTL;
+//         Indicateur.SousFichierClear = *off;
+
+//     // Chargement du sous-fichier
+//         fichierDS.rang_sfl = 0;
+
+//         DoW SQLCode = 0;
+
+//             fichierDS.rang_sfl = fichierDS.rang_sfl + 1;
+
+//             ECRANLIGNENUMEROLIVRAISON = KCOENT.NUMLIV;
+//             ECRANLIGNENUMEROFACTURE = KCOENT.NUMFAC;
+
+//             //Recherche code tournée, client livré, 
+//             exec SQL
+//             select ECOTRA, ECOCLL, ejjlvc, emmlvc, eaalvc, exxlvc
+//             Into :EcranLigneCodeTournee, :EcranLigneCodeClient, :DateLivraison.jour,
+//             :DateLivraison.mois, :DateLivraison.annee, :DateLivraison.siecle
+//             From VENTLV
+//             Where enuliv = :KCOENT.NUMLIV;
+            
+//             ENCRALIGNEDESIGNATIONCLIENT = *BLANKS;
+//             ECRANLIGNEDATELIVRAISON = *BLANKS;
+
+//             Write GESTIONSFL;
+
+//       // Fetch
+//             exec sql 
+//             FETCH FROM C1 INTO
+//             :KCOENT.NUMLIV,
+//             :KCOENT.NUMFAC,
+//             :KCOENT.NUMEDI,
+//             :KCOENT.LIVDAT,
+//             :KCOENT.LIVUSR,
+//             :KCOENT.TOPRET,
+//             :KCOENT.RETDAT,
+//             :KCOENT.RETUSR;
+//             GestionErreurSQL();
+
+//         EndDo;
+//     // Affectation du nombre total de ligne
+//         NombreTotalLignesSF = fichierDS.rang_sfl;
+
+//     Else;//Erreur requete
+//         GestionErreurSQL();
+//     EndIf;
+
+
+//   // Fermeture du curseur
+//     exec sql CLOSE C1;
+//     GestionErreurSQL();
+
+//     Return EnregistrementsTrouves;
+// End-Proc ;

@@ -2,6 +2,12 @@
      A                                      DSPSIZ(24 80 *DS3)
      A                                      PRINT
      A          R GESTIONBAS
+     A                                      RTNCSRLOC(&EFORMA &EZONCU)
+     A                                      CSRLOC(ENOLIG ENOCOL)
+     A            ENOLIG         3S 0H      ALIAS(ECRANDEPLACERCURSEURLIGNE)
+     A            ENOCOL         3S 0H      ALIAS(ECRANDEPLACERCURSEURCOLONNE)
+     A            EFORMA        10A  H
+     A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
      A                                 23  3'F2=Utilisateur'
      A                                      COLOR(BLU)
      A                                 23 24'F3=Fin'
@@ -10,23 +16,23 @@
      A                                      COLOR(BLU)
      A                                 23 57'F9=Nouvelle livraison'
      A                                      COLOR(BLU)
-     A            E2MSGERR      30     22  3ALIAS(ECRAN2MESSAGEERREUR)
+     A            E2MSGERR      30     22  3ALIAS(ECRANMESSAGEERREUR)
      A                                      COLOR(RED)
      A                                      DSPATR(RI)
      A  82                                  DSPATR(ND)
-     A            E2MSGINFO     40     22 41ALIAS(ECRAN2MESSAGEINFO)
+     A            E2MSGINFO     40     22 41ALIAS(ECRANMESSAGEINFO)
      A                                      DSPATR(RI)
      A  83                                  DSPATR(ND)
      A                                      COLOR(TRQ)
      A            EVEOBJ        10A    24 70COLOR(PNK)
      A                                      ALIAS(ECRANVERBEOBJET)
      A          R GESTIONSFL                SFL
-     A            ELOPTUT        1   B  8  3ALIAS(ECRANLIGNEOPTIONUT)
-     A            ELNULIV        8Y 0O  8  6ALIAS(ECRANLIGNENUMEROLIVRAISON)
+     A            ELOPTAC        1   B  8  3ALIAS(ECRANLIGNEACTION)
+     A            ELNULIV        8Y 0O  8  5ALIAS(ECRANLIGNENUMEROLIVRAISON)
      A            ELDECL        30   O  8 37ALIAS(ECRANLIGNEDESIGNATIONCLIENT)
-     A            ELNUFAC        8Y 0   8 15ALIAS(ECRANLIGNENUMEROFACTURE)
-     A            ELCOTO         2Y 0   8 24ALIAS(ECRANLIGNECODETOURNEE)
-     A            ELCOCL         9Y 0   8 27ALIAS(ECRANLIGNECODECLIENT)
+     A            ELNUFAC        8Y 0   8 14ALIAS(ECRANLIGNENUMEROFACTURE)
+     A            ELCOTO         3      8 23ALIAS(ECRANLIGNECODETOURNEE)
+     A            ELCOCL         9      8 27ALIAS(ECRANLIGNECODECLIENT)
      A            ELDALI          L  B  8 68ALIAS(ECRANLIGNEDATELIVRAISON)
      A                                      DATFMT(*JOB)
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
@@ -52,21 +58,20 @@
      A                                  1 73DATE
      A                                      EDTCDE(Y)
      A                                  2 73TIME
-     A                                  6  6'N° LIV'
+     A                                  6  5'N° LIV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  6  3'O'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 24'TOU'
+     A                                  6 23'TOU'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 28'CDE CLI'
+     A                                  6 27'CDE CLI'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  3 25'F9=Nouvelle livraison'
      A                                      COLOR(WHT)
-     A  84                                  DSPATR(ND)
      A                                  6 37'Désignation client'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
@@ -74,8 +79,7 @@
      A                                      COLOR(WHT)
      A                                  3 62'2=Visualiser'
      A                                      COLOR(WHT)
-     A  84                                  DSPATR(ND)
-     A                                  6 15'N° FAC'
+     A                                  6 14'N° FAC'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  6 68'Date LIV'
@@ -83,49 +87,55 @@
      A                                      COLOR(WHT)
      A                                  3 48'1=Modifier'
      A                                      COLOR(WHT)
-     A  84                                  DSPATR(ND)
      A                                  4 62'5=Visualiser'
      A                                      COLOR(WHT)
-     A            ENULIF         8Y 0I  7  6COLOR(YLW)
+     A            ENULIF         8Y 0B  7  5COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROLIVRAISONFILTRE)
      A                                      TEXT('Filtre sur le numéro de livra-
      A                                      ison')
-     A            ENUFAF         8Y 0I  7 15COLOR(YLW)
+     A            ENUFAF         8Y 0B  7 14COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROFACTUREFILTRE)
      A                                      TEXT('Filtre sur le numéro de factu-
      A                                      re')
-     A            ENUTOF         2   I  7 24COLOR(YLW)
+     A            ENUTOF         3   B  7 23COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROTOURNEEFILTRE)
      A                                      TEXT('Filtre sur le numéro de tourn-
      A                                      ée')
-     A            ENULIF3        9   I  7 27COLOR(YLW)
+     A            ENULIF3        9   B  7 27COLOR(BLU)
      A                                      ALIAS(ECRANCODECLIENTFILTRE)
      A                                      TEXT('Filtre sur le code client')
-     A            EDECLF        30   I  7 37COLOR(YLW)
+     A            EDECLF        30   B  7 37COLOR(BLU)
      A                                      ALIAS(ECRANDESIGNATIONCLIENTFILTRE)
      A                                      TEXT('Filtre sur la désignation cli-
      A                                      ent')
-     A            EDALIF          L  I  7 68ALIAS(ECRANDATELIVRAISONFILTRE)
+
+     A            EDALIF          L  B  7 68ALIAS(ECRANDATELIVRAISONFILTRE)
      A                                      DATFMT(*JOB)
-     A                                      COLOR(YLW)
-     A                                  7  1'FLTR'
-     A                                      COLOR(YLW)
+     A                                      COLOR(BLU)
+     A                                  7  1'FLT'
+     A                                      COLOR(BLU)
      A                                  5  4'Masquer les retours traités (X=Fil-
      A                                      tre actif) :'
-     A                                      COLOR(YLW)
-     A            EAFLIF         1   I  5 51COLOR(YLW)
-     A                                      ALIAS(ECRANAFFICHERLIVRAISONFILTRE)
-     A                                      TEXT('Filtre sur le numéro de tourn-
-     A                                      ée')
+     A                                      COLOR(BLU)
+     A            EAFLIF         1   B  5 51COLOR(BLU)
+     A                                      ALIAS(ECRANLIVRAISSANSRETOURFILTRE)
+     A                                      TEXT('Filtre sur les livraisons san-
+     A                                      s retour')
      A                                  3  4'Livraison        :'
      A                                      COLOR(WHT)
      A                                  4 25'3=Nouveau retour'
      A                                      COLOR(WHT)
-     A  84                                  DSPATR(ND)
      A                                  4 48'4=Modifier'
      A                                      COLOR(WHT)
-     A  84                                  DSPATR(ND)
 
+     A*%%RS+<record-sequences>
+     A*%%RS+ <sequence name="gestion consignes">
+     A*%%RS+  <device type="display" width="80" height="24" />
+     A*%%RS+  <record-write record-format="GESTIONBAS" />
+     A*%%RS+  <record-write record-format="GESTIONCTL" />
+     A*%%RS+  <record-write record-format="GESTIONSFL" />
+     A*%%RS+ </sequence>
+     A*%%RS </record-sequences>
      A*%%RS+<record-sequences>
      A*%%RS+ <sequence name="gestion consignes">
      A*%%RS+  <device type="display" width="80" height="24" />
