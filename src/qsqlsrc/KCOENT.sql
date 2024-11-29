@@ -20,7 +20,7 @@
 Create Table FIDVALSAC.KCOENT
 (
    NumeroLivraison        For Column  NUMLIV Decimal(8, 0)   Not Null,
-   NumeroEdition          For Column  NUMEDI Decimal(2, 0)   Not Null,
+   NombreEdition          For Column  NNBEDI Decimal(2, 0)   Not Null,
    LivraisonTimeStamp     For Column  LIVDAT Timestamp       Not Null,
    LivraisonUtilisateur   For Column  LIVUSR Char(10)        Not Null,
    TopRetour              For Column  TOPRET Char(1)         Not Null,
@@ -40,7 +40,7 @@ Alter Table FIDVALSAC.KCOENT
 Label On FIDVALSAC.KCOENT
 (
    NumeroLivraison        Is    'Numero              Livraison',
-   NumeroEdition          Is    'Numero              Edition',
+   NombreEdition          Is    'Nombre              Edition',
    LivraisonTimeStamp     Is    'Livraison           TimeStamp',
    LivraisonUtilisateur   Is    'Livraison           Utilisateur',
    TopRetour              Is    'Top                 Retour',
@@ -51,7 +51,7 @@ Label On FIDVALSAC.KCOENT
 Label On FIDVALSAC.KCOENT
 (
    NumeroLivraison        Text Is    'Numero Livraison',
-   NumeroEdition          Text Is    'Numero Edition',
+   NombreEdition          Text Is    'Nombre Edition',
    LivraisonTimeStamp     Text Is    'Horodatage Livraison',
    LivraisonUtilisateur   Text Is    'Utilisateur Livraison',
    TopRetour              Text Is    'Top Retour',

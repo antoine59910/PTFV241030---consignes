@@ -16,11 +16,11 @@
      A                                      COLOR(BLU)
      A                                 23 57'F9=Nouvelle livraison'
      A                                      COLOR(BLU)
-     A            E2MSGERR      30     22  3ALIAS(ECRANMESSAGEERREUR)
+     A            E1MSGERR      30     22  3ALIAS(ECRANMESSAGEERREUR)
      A                                      COLOR(RED)
      A                                      DSPATR(RI)
      A  82                                  DSPATR(ND)
-     A            E2MSGINFO     40     22 41ALIAS(ECRANMESSAGEINFO)
+     A            E1MSGINFO     40     22 41ALIAS(ECRANMESSAGEINFO)
      A                                      DSPATR(RI)
      A  83                                  DSPATR(ND)
      A                                      COLOR(TRQ)
@@ -89,11 +89,11 @@
      A                                      COLOR(WHT)
      A                                  4 62'5=Visualiser'
      A                                      COLOR(WHT)
-     A            ENULIF         8Y 0B  7  5COLOR(BLU)
+     A            ENULIF         8   B  7  5COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROLIVRAISONFILTRE)
      A                                      TEXT('Filtre sur le numéro de livra-
      A                                      ison')
-     A            ENUFAF         8Y 0B  7 14COLOR(BLU)
+     A            ENUFAF         8   B  7 14COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROFACTUREFILTRE)
      A                                      TEXT('Filtre sur le numéro de factu-
      A                                      re')
@@ -108,16 +108,17 @@
      A                                      ALIAS(ECRANDESIGNATIONCLIENTFILTRE)
      A                                      TEXT('Filtre sur la désignation cli-
      A                                      ent')
-
      A            EDALIF          L  B  7 68ALIAS(ECRANDATELIVRAISONFILTRE)
      A                                      DATFMT(*JOB)
      A                                      COLOR(BLU)
      A                                  7  1'FLT'
      A                                      COLOR(BLU)
-     A                                  5  4'Masquer les retours traités (X=Fil-
-     A                                      tre actif) :'
+     A                                  5  1'FLT = Filtre'   
      A                                      COLOR(BLU)
-     A            EAFLIF         1   B  5 51COLOR(BLU)
+     A                                  5 25'Masquer retours traités (X=FLT-
+     A                                       actif) :'
+     A                                      COLOR(BLU)
+     A            EAFLIF         1   B  5 65COLOR(BLU)
      A                                      ALIAS(ECRANLIVRAISSANSRETOURFILTRE)
      A                                      TEXT('Filtre sur les livraisons san-
      A                                      s retour')
@@ -127,20 +128,11 @@
      A                                      COLOR(WHT)
      A                                  4 48'4=Modifier'
      A                                      COLOR(WHT)
-
-     A*%%RS+<record-sequences>
-     A*%%RS+ <sequence name="gestion consignes">
-     A*%%RS+  <device type="display" width="80" height="24" />
-     A*%%RS+  <record-write record-format="GESTIONBAS" />
-     A*%%RS+  <record-write record-format="GESTIONCTL" />
-     A*%%RS+  <record-write record-format="GESTIONSFL" />
-     A*%%RS+ </sequence>
-     A*%%RS </record-sequences>
-     A*%%RS+<record-sequences>
-     A*%%RS+ <sequence name="gestion consignes">
-     A*%%RS+  <device type="display" width="80" height="24" />
-     A*%%RS+  <record-write record-format="GESTIONBAS" />
-     A*%%RS+  <record-write record-format="GESTIONCTL" />
-     A*%%RS+  <record-write record-format="GESTIONSFL" />
-     A*%%RS+ </sequence>
-     A*%%RS </record-sequences> 
+     A          R ECREAT                    WINDOW(6 10 7 62)
+     A                                      CA12(12)
+     A                                  2 22'Création Livraison'
+     A                                  4  2'Numéro Livraison :'
+     A            ECRLIV         8Y 0B  4 22ALIAS(ECRANCREATIONLIVRAISON)
+     A                                      TEXT('ECRANCREATIONLIVRAISON')
+     A                                  7 47'F12 = Annuler'
+     A                                      COLOR(BLU)

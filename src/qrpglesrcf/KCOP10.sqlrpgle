@@ -6,6 +6,13 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 // CALL PGM(KCOP10) PARM((GER  (*CHAR 4)) (LIVCON (*CHAR 6))
 //  ('Gestion livraison consignes' (*CHAR 30)))
 
+// TODO: 
+// - Gestion multi-users
+// - Appel PGM KCOP11
+
+// FIXME: 
+//
+
 ///
 // --------------------------------------------------------------
 //       NOM        : KCOP10              TYPE : Interactif
@@ -24,7 +31,7 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 //                      F6 : Services
 //                      F9 : Nouvelle livraison
 //
-//              Filtres disponibles (type "Commence par" et additionnel) :
+//              Filtres disponibles :
 //                      - Numéro de livraison
 //                      - Numéro de facture
 //                      - Tournée
@@ -74,8 +81,8 @@ Dcl-F KCOP10E  WorkStn
 // ECRANLIGNESOUSFICHIER packed(4:0);      // Numéro de la ligne du sous-fichier
 // ECRANLIBELLESOCIETE char(20);           // Libellé de la société
 // ECRANLIBELLEACTION char(30);            // Libellé de l'action en cours
-// ECRANNUMEROLIVRAISONFILTRE packed(8:0); // Filtre sur le numéro de livraison
-// ECRANNUMEROFACTUREFILTRE packed(8:0);   // Filtre sur le numéro de facture
+// ECRANNUMEROLIVRAISONFILTRE char(8); // Filtre sur le numéro de livraison
+// ECRANNUMEROFACTUREFILTRE char(8);   // Filtre sur le numéro de facture
 // ECRANNUMEROTOURNEEFILTRE char(2);       // Filtre sur le numéro de tournée
 // ECRANCODECLIENTFILTRE packed(9:0);      // Filtre sur le code client
 // ECRANDESIGNATIONCLIENTFILTRE char(30);  // Filtre sur la désignation du client
@@ -92,15 +99,23 @@ Dcl-F KCOP10E  WorkStn
 // ECRANLIGNEDATELIVRAISON date;           // Date de livraison de la ligne
 
 // --- Appels de prototypes et de leurs DS-------------------------------
-// Prototype des programmes appelés
-// Dcl-Pr KCOP20 ExtPgm;
-//     NumeroLivraison Packed(7:0) const;
-//     Mode Char(13) const;//Livraison ou retour
-//     Droits Char(13) const;//Visualiser, modifier, créer,...
-//     CodeSociete Char(2) const;
-//     ReturnOperationEffectuee char(1);
-// End-Pr ;
-
+///
+// KCOP11 : Gestion des livraisons et retours des consignes : saisies
+//
+// @param £Operation - Type d'opération (LIVRAISON ou RETOUR)
+// @param £Mode - Mode de fonctionnement (CREATION/MODIFICATION/VISUALISATION) 
+// @param £NumeroLivraison - Numéro de la livraison à traiter
+///
+Dcl-PR KCOP11 ExtPgm('KCOP11');
+    £Operation          Char(30) Const;    // Type d'opération
+    £Mode              Char(30) Const;     // Mode de fonctionnement
+    £NumeroLivraison   Packed(8:0) Const; // Numéro de livraison
+End-PR;
+Dcl-ds KCOP11_p qualified;
+    Operation          Char(30);    // Type d'opération
+    Mode              Char(30);     // Mode de fonctionnement
+    NumeroLivraison   Packed(8:0); // Numéro de livraison
+End-Ds;
 // Recherche valeur table chartreuse
 /DEFINE PR_VORPAR
 // Fenêtre utilisateur
@@ -123,21 +138,23 @@ Dcl-Ds Societe qualified;
     Libelle Char(26);
     BilbiothequeFichier Char(9);
 End-Ds;
-
-Dcl-Ds ParametresConsignes qualified;
-    XLIPAR Char(100);
-    TypeArticle Char(1) Overlay(XLIPAR);
-    CodeMouvement Char(2) Overlay(XLIPAR:*NEXT);
-    TopPrealimentationRetour Char(1) Overlay(XLIPAR:*NEXT);
-    NombreExemplairesBL Packed(2:0) Overlay(XLIPAR:*NEXT);
-End-Ds;
+Dcl-s Compteur Packed(10:0);
 
 
 // --- Constantes -------------------------------------------------------
+Dcl-C LIVRAISON 'LIVRAISON';
+Dcl-C RETOUR 'RETOUR';
 Dcl-C CREATION 'CREATION';
 Dcl-C MODIFICATION 'MODIFICATION';
 Dcl-C VISUALISATION 'VISUALISATION';
-Dcl-C TABVV_PARAMETRESCONSIGNES 'XCOPAR';
+Dcl-C QUOTE '''';
+Dcl-C ESPACE ' ';
+Dcl-C POURCENTAGE '%';
+Dcl-C CODE_ACTION_MODIFIER_LIVRAISON '1';
+Dcl-C CODE_ACTION_VISUALISER_LIVRAISON '2';
+Dcl-C CODE_ACTION_CREER_RETOUR '3';
+Dcl-C CODE_ACTION_MODIFIER_RETOUR '4';
+Dcl-C CODE_ACTION_VISUALISER_RETOUR '5';
 
 // --- Tables -------------------------------------------------------
 Dcl-Ds KCOENT_t extname('KCOENT') qualified template;
@@ -168,10 +185,6 @@ End-Ds ;
 //                              PROGRAMME   PRINCIPAL
 //
 // ---------------------------------------------------------------------
-// Initialisation SQL :
-Exec Sql
-     Set Option Commit = *None;
-
 // Paramètres
 Dcl-Pi *N;
     // entrées
@@ -181,6 +194,11 @@ Dcl-Pi *N;
 
     // sorties
 End-Pi ;
+// ---------------------------------------------------------------------
+
+// Initialisation SQL :
+Exec Sql
+     Set Option Commit = *None;
 
 // Initialisation du programme
 InitialisationProgramme();
@@ -205,7 +223,6 @@ DoW not Fin;
 EndDo;
 
 *Inlr=*On;
-
 
 // ----------------------------------------------------------------------------
 //
@@ -263,16 +280,7 @@ Dcl-Proc InitialisationProgramme;
     Societe.Code = GetCodeSociete();
     Societe.Libelle = GetLibelleSociete();
     Societe.BilbiothequeFichier = GetBibliothequeFichierSociete();
-    
-    //--- 3. Chargement paramètres consignes --------------------------------
-    // Lecture des paramètres dans XCOPAR
-    Exec SQL
-        Select XLIPAR
-        Into :ParametresConsignes.XLIPAR
-        FROM VPARAM
-        Where XCORAC = :TABVV_PARAMETRESCONSIGNES 
-        and XCOARG = :Societe.Code;
-    GestionErreurSQL();
+
     
     //--- 4. Nettoyage des données temporaires ------------------------------
     // Purge des blocages antérieurs à J-1
@@ -308,8 +316,8 @@ Dcl-Proc InitialisationProgramme;
     
     // Initialisation des filtres
     ECRANLIVRAISSANSRETOURFILTRE = 'X';      // Filtre retours traités (activé par défaut)
-    ECRANNUMEROLIVRAISONFILTRE = 0;         // Filtre numéro livraison
-    ECRANNUMEROFACTUREFILTRE = 0;            // Filtre numéro facture  
+    ECRANNUMEROLIVRAISONFILTRE = *BLANKS;         // Filtre numéro livraison
+    ECRANNUMEROFACTUREFILTRE = *BLANKS;            // Filtre numéro facture  
     ECRANNUMEROTOURNEEFILTRE = *Blanks;      // Filtre tournée
     ECRANCODECLIENTFILTRE = *BLANKS;          // Filtre code client
     ECRANDESIGNATIONCLIENTFILTRE = *Blanks;  // Filtre désignation client
@@ -327,6 +335,13 @@ Dcl-Proc ChargerSousFichier;
     Dcl-Pi *n ;
     End-Pi;
   
+    Dcl-S Requete char(2048);
+
+    Dcl-S ClauseSelect char(2048);
+    Dcl-S ClauseFROM char(2048);
+    Dcl-S ClauseWhere char(2048);
+    Dcl-S ClauseOrderBy char(2048);
+
     // Nettoyage initial du sous-fichier
     Indicateur.SousFichierClear = *On;
     Write GESTIONCTL;
@@ -335,80 +350,93 @@ Dcl-Proc ChargerSousFichier;
     // Initialisation du rang
     fichierDS.rang_sfl = 0;
 
-    // Préparation de la requête
-    Exec SQL 
-        DECLARE C1 CURSOR FOR
-        SELECT DISTINCT 
-            K.NUMEROLIVRAISON, 
-            V.ENUFAC,
-            V.ECOTRA,
-            V.ECOCLL,
-            C.CLISOC as DESIGNATION_CLIENT,
-            DATE(TIMESTAMP_ISO(
-                DIGITS(V.EXXDLV) CONCAT 
-                DIGITS(V.EAADLV) CONCAT '-' CONCAT 
-                DIGITS(V.EMMDLV) CONCAT '-' CONCAT 
-                DIGITS(V.EJJDLV)
-            )) as DATE_LIVRAISON
-        FROM FIDVALSAC.KCOENT K
-        LEFT JOIN FIDVALSAC.VENTLV V ON V.ENULIV = K.NUMEROLIVRAISON
-        LEFT JOIN FIDVALSAC.CLIENT C ON C.CCOCLI = V.ECOCLL
-        WHERE 1=1
-            AND (:ECRANNUMEROLIVRAISONFILTRE = 0 OR K.NUMEROLIVRAISON = :ECRANNUMEROLIVRAISONFILTRE)
-            AND (:ECRANNUMEROFACTUREFILTRE = 0 OR V.ENUFAC = :ECRANNUMEROFACTUREFILTRE)
-            AND (:ECRANNUMEROTOURNEEFILTRE = '' OR V.ECOTRA = :ECRANNUMEROTOURNEEFILTRE) 
-            AND (:ECRANCODECLIENTFILTRE = '' OR V.ECOCLL = :ECRANCODECLIENTFILTRE)
-            AND (:ECRANDESIGNATIONCLIENTFILTRE = '' OR UPPER(C.CLISOC) LIKE UPPER('%' CONCAT :ECRANDESIGNATIONCLIENTFILTRE CONCAT '%'))
-            AND (:ECRANDATELIVRAISONFILTRE = DATE('0001-01-01') 
-                OR DATE(TIMESTAMP_ISO(
-                    DIGITS(V.EXXDLV) CONCAT 
-                    DIGITS(V.EAADLV) CONCAT '-' CONCAT 
-                    DIGITS(V.EMMDLV) CONCAT '-' CONCAT 
-                    DIGITS(V.EJJDLV)
-                )) = :ECRANDATELIVRAISONFILTRE)
-        ORDER BY K.NUMEROLIVRAISON DESC;
+    ClauseSelect = 'SELECT DISTINCT K.NUMEROLIVRAISON, ' +
+                  'V.ENUFAC, V.ECOTRA, V.ECOCLL, C.CLISOC, ' +
+                  'CASE ' +
+                    'WHEN V.EJJDLV > 0 AND V.EMMDLV > 0 AND V.EAADLV > 0 ' +
+                    'THEN DATE(' +
+                        'CAST(' +
+                            'CASE ' +
+                                'WHEN V.EXXDLV = 0 THEN ''20'' ' +
+                                'ELSE DIGITS(V.EXXDLV) ' +
+                            'END ' +
+                            'CONCAT RIGHT(''00'' CONCAT DIGITS(V.EAADLV), 2) ' +
+                            'CONCAT ''-'' ' +
+                            'CONCAT RIGHT(''00'' CONCAT DIGITS(V.EMMDLV), 2) ' +
+                            'CONCAT ''-'' ' +
+                            'CONCAT RIGHT(''00'' CONCAT DIGITS(V.EJJDLV), 2) ' +
+                            'AS VARCHAR(10)' +
+                        ')' +
+                    ') ' +
+                    'ELSE NULL ' +
+                  'END as DATE_LIVRAISON';
+                  
+    ClauseFROM = 'FROM KCOENT K ' +
+                 'LEFT JOIN VENTLV V ON V.ENULIV = K.NUMEROLIVRAISON ' +
+                 'LEFT JOIN CLIENT C ON C.CCOCLI = V.ECOCLL';
+
+    ClauseWhere = CreationClauseWhere();
+    
+    ClauseOrderBy = 'ORDER BY K.NUMEROLIVRAISON DESC';
+
+    Requete = %trimr(ClauseSelect) + ESPACE +
+              %Trimr(ClauseFROM) + ESPACE +
+              %Trimr(ClauseWhere) + ESPACE +
+              %Trimr(ClauseOrderBy);
+
+    // Préparation du curseur pour récupérer les résultats de la requête
+    exec sql PREPARE S1 FROM :Requete;
+    GestionErreurSQL();
+
+    // Déclaration du curseur
+    exec sql DECLARE C1 CURSOR FOR S1;
     GestionErreurSQL();
 
     // Ouverture du curseur
-    Exec SQL OPEN C1;
+    exec sql OPEN C1;
     GestionErreurSQL();
 
-    // Premier FETCH pour initialiser SQLCODE
-    Exec SQL 
-        FETCH NEXT FROM C1 
-        INTO :ECRANLIGNENUMEROLIVRAISON,
-             :ECRANLIGNENUMEROFACTURE,
-             :ECRANLIGNECODETOURNEE,
-             :ECRANLIGNECODECLIENT,
-             :ECRANLIGNEDESIGNATIONCLIENT,
-             :ECRANLIGNEDATELIVRAISON;
+    // Premier FETCH
+    exec sql FETCH FROM C1 INTO 
+            :ECRANLIGNENUMEROLIVRAISON,
+            :ECRANLIGNENUMEROFACTURE,
+            :ECRANLIGNECODETOURNEE,
+            :ECRANLIGNECODECLIENT,
+            :ECRANLIGNEDESIGNATIONCLIENT,
+            :ECRANLIGNEDATELIVRAISON;
     GestionErreurSQL();
 
-    // Lecture des données tant que SQLCODE = 0
-    DoW SQLCODE = 0;
-        // Incrémentation du rang
-        fichierDS.rang_sfl += 1;
+    If SQLCode = 100; //Aucun enregistrement n'a été trouvé
+        ECRANMESSAGEERREUR = 'Aucune livraison trouvée';
+        Indicateur.MasquerMessageErreur = *Off;
+        
+    ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
+        DoW SQLCode = 0;
+            // Incrémentation du rang
+            fichierDS.rang_sfl += 1;
 
-        // Initialisation des autres champs
-        ECRANLIGNEACTION = ' ';
+            // Initialisation ligne action
+            ECRANLIGNEACTION = ' ';
 
-        // Écriture de la ligne dans le sous-fichier
-        Write GESTIONSFL;
+            // Écriture dans le sous-fichier  
+            Write GESTIONSFL;
 
-        // Lecture suivante
-        Exec SQL 
-            FETCH NEXT FROM C1 
-            INTO :ECRANLIGNENUMEROLIVRAISON,
-                 :ECRANLIGNENUMEROFACTURE,
-                 :ECRANLIGNECODETOURNEE,
-                 :ECRANLIGNECODECLIENT,
-                 :ECRANLIGNEDESIGNATIONCLIENT,
-                 :ECRANLIGNEDATELIVRAISON;
+            // Lecture suivante
+            exec sql FETCH FROM C1 INTO 
+                    :ECRANLIGNENUMEROLIVRAISON,
+                    :ECRANLIGNENUMEROFACTURE,
+                    :ECRANLIGNECODETOURNEE,
+                    :ECRANLIGNECODECLIENT,
+                    :ECRANLIGNEDESIGNATIONCLIENT,
+                    :ECRANLIGNEDATELIVRAISON;
+            GestionErreurSQL();
+        EndDo;
+
+    Else;//Erreur requete
         GestionErreurSQL();
-    EndDo;
-
+    EndIf;
     // Fermeture du curseur
-    Exec SQL CLOSE C1;
+    exec sql CLOSE C1;
     GestionErreurSQL();
 
     // Mémorisation du nombre total de lignes
@@ -417,12 +445,81 @@ Dcl-Proc ChargerSousFichier;
     // Positionnement initial
     EcranLigneSousFichier = 1;
     EcranDeplacerCurseurLigne = 8;
-    EcranDeplacerCurseurColonne = 3;
-
+    EcranDeplacerCurseurColonne = 3;  
 End-Proc;
 
+///
+// Création clause Where
+// Permet de construire la clause where en fonction des filtres
+// Filtres disponibles :
+//  - Numéro de livraison (commence par)  
+//  - Numéro de facture (commence par)
+//  - Numéro de tournée (exact)
+//  - Code client (exact)
+//  - Désignation client (contient)
+//  - Date de livraison (exact)
+//  - Masquer les retours traités
+//
+// @Return : ClauseWhere char(2048)
+///
+Dcl-Proc CreationClauseWhere;
+    Dcl-Pi *n Char(2048);
+    End-Pi;
 
+    Dcl-S ClauseWhere char(2048);
 
+    // Construction clause where de base avec Filtre désignation client (contient)
+    ClauseWhere = 'WHERE UPPER(C.CLISOC) LIKE ' + QUOTE +
+                      POURCENTAGE + %Trim(ECRANDESIGNATIONCLIENTFILTRE) + 
+                      POURCENTAGE + QUOTE;
+
+    // Filtre numéro livraison (commence par)
+    If ECRANNUMEROLIVRAISONFILTRE <> *BLANKS;
+        ClauseWhere = %trimr(ClauseWhere) 
+                      +  ' AND DIGITS(K.NUMEROLIVRAISON) LIKE ' + QUOTE
+                      + %trim(ECRANNUMEROLIVRAISONFILTRE) + POURCENTAGE + QUOTE;
+    EndIf;
+
+    // Filtre numéro facture (commence par)
+    If ECRANNUMEROFACTUREFILTRE <> *BLANKS;
+        ClauseWhere = %trimr(ClauseWhere)
+                     + ' AND DIGITS(V.ENUFAC) LIKE ' + QUOTE 
+                     + %trim(ECRANNUMEROFACTUREFILTRE) + POURCENTAGE + QUOTE;
+    EndIf;
+
+    // Filtre tournée
+    If ECRANNUMEROTOURNEEFILTRE <> *Blanks;
+        ClauseWhere = %trimr(ClauseWhere)
+                    + ' AND V.ECOTRA LIKE ' + QUOTE +
+                      ECRANNUMEROTOURNEEFILTRE + QUOTE;
+    EndIf;
+
+    // Filtre code client
+    If ECRANCODECLIENTFILTRE <> *Blanks;
+        ClauseWhere = %trimr(ClauseWhere)
+                        + ' AND V.ECOCLL LIKE ' + QUOTE + 
+                        ECRANCODECLIENTFILTRE + QUOTE;
+    EndIf;
+
+    // Filtre date livraison
+    If ECRANDATELIVRAISONFILTRE <> *Loval 
+    AND ECRANDATELIVRAISONFILTRE <> %Date('1940-01-01');
+        ClauseWhere = %trimr(ClauseWhere) 
+                    + ' AND DATE(TIMESTAMP_ISO('
+                    + 'DIGITS(V.EXXDLV) CONCAT '
+                    + 'DIGITS(V.EAADLV) CONCAT ''-'' CONCAT '
+                    + 'DIGITS(V.EMMDLV) CONCAT ''-'' CONCAT '
+                    + 'DIGITS(V.EJJDLV)'
+                    + ')) = ' + QUOTE + %Char(ECRANDATELIVRAISONFILTRE) + QUOTE;
+    EndIf;
+
+    // Filtre masquer retours traités
+    If ECRANLIVRAISSANSRETOURFILTRE = 'X';
+        ClauseWhere = %trimr(ClauseWhere)+ ' AND K.TOPRETOUR <> ''O''';
+    EndIf;
+
+    Return ClauseWhere;
+End-Proc;
 ///
 // AffichageEcran
 // Gère l'affichage de l'écran et du sous-fichier
@@ -447,9 +544,18 @@ End-Proc;
 
 ///
 // Action
-// affichage écran
+// Gestion des différentes actions possibles de l'utilisateur
+//
 ///
 Dcl-Proc Action;
+    Dcl-s FinCreation Ind Inz(*Off);
+    Dcl-S VENTLV_LivraisonExiste Ind;
+    Dcl-S KCOENT_LivraisonExiste Ind;
+    Indicateur.MasquerMessageErreur = *On;  
+    ECRANMESSAGEERREUR = *BLANKS;
+    Indicateur.MasquerMessageInfo = *On;
+    ECRANMESSAGEINFO = *BLANKS;
+
     Select;
         When fichierDS.TouchePresse = F2;
             AffichageFenetreUtilisateur(£CodeVerbe:£CodeObjet);
@@ -461,21 +567,154 @@ Dcl-Proc Action;
             AffichageFenetreServices();
 
         When fichierDS.touchePresse = F9;
-            dsply 'nouvelle livraison';
+        //Réinitialisation numéro de livraison
+            ECRANCREATIONLIVRAISON = 0;
+            EXFMT ECREAT;
+            dow not FinCreation;
+                Select;
+                When fichierDS.touchePresse = F12;
+                    FinCreation = *On;
+                When fichierDS.touchePresse = ENTREE;
+                    //On vérifie que la livraison existe dans VENTLV
+                    Exec SQL
+                        select COUNT(ENULIV)
+                        Into :Compteur
+                        FROM VENTLV
+                        Where ENULIV = :EcranCreationLivraison;
+                        GestionErreurSQL();
+                        If Compteur = 0;
+                            VENTLV_LivraisonExiste = *Off;
+                        ELse;
+                            VENTLV_LivraisonExiste = *On;
+                        EndIf;
+                    
+                    If VENTLV_LivraisonExiste = *On;
+                    //On vérifie que la livraison n'existe pas déjà (qu'une livraison a déjà été saisie)
+                    Exec SQL
+                        select COUNT(NumeroLivraison)
+                        Into :Compteur
+                        FROM KCOENT
+                        Where NumeroLivraison = :EcranCreationLivraison;
+                        GestionErreurSQL();
+                        If Compteur = 0;
+                            KCOENT_LivraisonExiste = *Off;
+                        ELse;
+                            KCOENT_LivraisonExiste = *On;
+                        EndIf;
+                        
+                        If KCOENT_LivraisonExiste = *Off;//Ouverture de la création de la livraison
+                            KCOP11(LIVRAISON:CREATION:EcranCreationLivraison);
+                        Else;//La livraison a déjà été crée
+                            ECRANMESSAGEERREUR='LIV : ' 
+                            + %EDITC(EcranCreationLivraison:'Z') 
+                            + ' déjà créée';
+                            Indicateur.MasquerMessageErreur = *Off;
+                        EndIf;
+                    Else;
+                        ECRANMESSAGEERREUR='LIV : ' 
+                        + %EDITC(EcranCreationLivraison:'Z') 
+                        + ' inexistante';
+                        Indicateur.MasquerMessageErreur = *Off;
+                    EndIf;
+                    FinCreation = *On;
+                Other;
+                EndSl;
+            enddo;
+            Refresh = *On;
 
         When fichierDS.TouchePresse = F12;
             Fin=*On;
 
         When  fichierDS.touchePresse = ENTREE;
-            dsply 'entrée';
+            If Verification();
+                If KCOP11_p.NumeroLivraison <> 0;
+                KCOP11(KCOP11_p.Operation:KCOP11_p.Mode:KCOP11_p.NumeroLivraison);
+                EndIf;
+            EndIf;
             Refresh = *On;
+
+            
         Other;
     EndSl;
   
 End-Proc;
 
+///
+// Vérification des saisies et sauvegarde de l'action de l'utilisateur
+// Vérifications :
+//  - On vérifie qu'il n'y a pas plusieurs actions choisies en même temps
+//
+// @return *On si OK, *Off si KO
+///
+
+Dcl-Proc Verification;
+    Dcl-Pi *n Ind;
+    End-Pi;
+
+    Dcl-S i Zoned(4:0);
+    Dcl-S Rang Zoned(2:0);
+    Dcl-S SauvegardeAction Char(1);
+    Dcl-S VerificationReturn Ind Inz(*On);
+
+    // Initialisations
+    Indicateur.MasquerMessageErreur = *On;
+    SauvegardeAction = *BLANKS;
+    KCOP11_p.Operation = *BLANKS;
+    KCOP11_p.Mode = *BLANKS;
+    KCOP11_p.NumeroLivraison = 0;
+
+    Rang = 1;
+    For i = 1 to NombreTotalLignesSF;
+        Chain i GESTIONSFL;
+
+    // Vérifications
+        If ECRANLIGNEACTION <> *BLANKS;
+            // Vérification qu'il n'y ait pas plusieurs actions
+            If VerificationReturn = *On And SauvegardeAction <> *BLANKS;
+                EcranMessageErreur = 'Une seule action à la fois';
+                Indicateur.MasquerMessageErreur = *Off;
+                VerificationReturn = *Off;
+            EndIf;
 
 
+            //Sauvegarde de l'action
+            select;
+                when ECRANLIGNEACTION = CODE_ACTION_MODIFIER_LIVRAISON;
+                    KCOP11_p.Operation = LIVRAISON;
+                    KCOP11_p.Mode = MODIFICATION;
+                    KCOP11_p.NumeroLivraison = ECRANLIGNENUMEROLIVRAISON;
+
+                when ECRANLIGNEACTION = CODE_ACTION_VISUALISER_LIVRAISON;
+                    KCOP11_p.Operation = LIVRAISON;
+                    KCOP11_p.Mode = VISUALISATION;
+                    KCOP11_p.NumeroLivraison = ECRANLIGNENUMEROLIVRAISON;
+
+                when ECRANLIGNEACTION = CODE_ACTION_CREER_RETOUR;
+                    KCOP11_p.Operation = RETOUR;
+                    KCOP11_p.Mode = CREATION;
+                    KCOP11_p.NumeroLivraison = ECRANLIGNENUMEROLIVRAISON;
+
+                when ECRANLIGNEACTION = CODE_ACTION_MODIFIER_RETOUR;
+                    KCOP11_p.Operation = RETOUR;
+                    KCOP11_p.Mode = MODIFICATION;
+                    KCOP11_p.NumeroLivraison = ECRANLIGNENUMEROLIVRAISON;
+
+                when ECRANLIGNEACTION = CODE_ACTION_VISUALISER_RETOUR;
+                    KCOP11_p.Operation = RETOUR;
+                    KCOP11_p.Mode = VISUALISATION;
+                    KCOP11_p.NumeroLivraison = ECRANLIGNENUMEROLIVRAISON;
+
+                other;
+            endsl;
+            Rang = Rang + 1;
+            SauvegardeAction = ECRANLIGNEACTION;
+        EndIf;
+    EndFor;
+
+
+    Return VerificationReturn;
+
+End-Proc;
 
 
 
@@ -654,133 +893,3 @@ End-Proc;
 Dcl-Proc AffichageFenetreServices ;
     PR_GOASER();
 End-Proc;
-
-///
-// InitialiseSousFichier
-// initialise les valeurs du sous-fichier
-// selon les filtres appliqués par l'utilisateur
-//  - Si des enregistrements existent, on initialise les valeurs du sous fichier
-// du second écran et on revoie true
-//  - Sinon, on fait rien et on renvoie false
-//
-// @Return : EnregistrementsTrouves Ind
-///
-
-// Dcl-Proc InitialiseSousFichier;
-//     Dcl-Pi *n Ind;
-//     End-Pi;
-
-//     Dcl-S Requete char(2048);
-//     Dcl-S EnregistrementsTrouves Ind Inz(*Off);
-
-//     Dcl-S ClauseSelect char(2048);
-//     Dcl-S ClauseFROM char(2048);
-//     Dcl-S ClauseWhere char(2048);
-//     Dcl-S ClauseOrderBy char(2048);
-
-//     Dcl-Ds KCOENT likeDs(KCOENT_t);
-//     Dcl-Ds DateLivraison qualified;
-//         jour char(2);
-//         mois char(2);
-//         annee char(2);
-//         siecle char(2);
-//     End-Ds;
-
-//     Dcl-C ESPACE ' ';
-
-//     ClauseSelect = 'SELECT DISTINCT NUMEROLIVRAISON, NUMEROFACTURE, NUMEROEDITION, '
-//     + 'LIVRAISONTIMESTAMP, LIVRAISONUTILISATEUR, TOPRETOUR, RETOURTIMESTAMP, RETOURUTILISATEUR';
-//     ClauseFROM = 'FROM KCOENT';
-//     //ClauseWhere = CreationClauseWhere();
-//     ClauseOrderBy = 'ORDER BY NUMEROLIVRAISON Desc ';
-
-//     Requete =
-//         %trimr(ClauseSelect) + ESPACE
-//         + %Trimr(ClauseFROM) + ESPACE
-//         //+ %Trimr(ClauseWhere) + ESPACE
-//         + %Trimr(ClauseOrderBy);
-
-//   // Préparation du curseur pour récupérer les résultats de la requête
-//     exec sql PREPARE S1 FROM :Requete;
-//     GestionErreurSQL();
-
-//   // Déclaration du curseur
-//     exec sql DECLARE C1 CURSOR FOR S1;
-//     GestionErreurSQL();
-
-//   // Ouverture du curseur
-//     exec sql OPEN C1;
-//     GestionErreurSQL();
-
-//   // Fetch
-//     exec sql FETCH FROM C1 INTO
-//             :KCOENT.NUMLIV,
-//             :KCOENT.NUMFAC,
-//             :KCOENT.NUMEDI,
-//             :KCOENT.LIVDAT,
-//             :KCOENT.LIVUSR,
-//             :KCOENT.TOPRET,
-//             :KCOENT.RETDAT,
-//             :KCOENT.RETUSR;
-//     If SQLCode = 100; //Aucun enregistrement n'a été trouvé
-    
-//     ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
-
-//         EnregistrementsTrouves = *On;
-
-//     // Remise à blanc du sous-fichier
-//         Indicateur.SousFichierClear = *On;
-//         Write GESTIONCTL;
-//         Indicateur.SousFichierClear = *off;
-
-//     // Chargement du sous-fichier
-//         fichierDS.rang_sfl = 0;
-
-//         DoW SQLCode = 0;
-
-//             fichierDS.rang_sfl = fichierDS.rang_sfl + 1;
-
-//             ECRANLIGNENUMEROLIVRAISON = KCOENT.NUMLIV;
-//             ECRANLIGNENUMEROFACTURE = KCOENT.NUMFAC;
-
-//             //Recherche code tournée, client livré, 
-//             exec SQL
-//             select ECOTRA, ECOCLL, ejjlvc, emmlvc, eaalvc, exxlvc
-//             Into :EcranLigneCodeTournee, :EcranLigneCodeClient, :DateLivraison.jour,
-//             :DateLivraison.mois, :DateLivraison.annee, :DateLivraison.siecle
-//             From VENTLV
-//             Where enuliv = :KCOENT.NUMLIV;
-            
-//             ENCRALIGNEDESIGNATIONCLIENT = *BLANKS;
-//             ECRANLIGNEDATELIVRAISON = *BLANKS;
-
-//             Write GESTIONSFL;
-
-//       // Fetch
-//             exec sql 
-//             FETCH FROM C1 INTO
-//             :KCOENT.NUMLIV,
-//             :KCOENT.NUMFAC,
-//             :KCOENT.NUMEDI,
-//             :KCOENT.LIVDAT,
-//             :KCOENT.LIVUSR,
-//             :KCOENT.TOPRET,
-//             :KCOENT.RETDAT,
-//             :KCOENT.RETUSR;
-//             GestionErreurSQL();
-
-//         EndDo;
-//     // Affectation du nombre total de ligne
-//         NombreTotalLignesSF = fichierDS.rang_sfl;
-
-//     Else;//Erreur requete
-//         GestionErreurSQL();
-//     EndIf;
-
-
-//   // Fermeture du curseur
-//     exec sql CLOSE C1;
-//     GestionErreurSQL();
-
-//     Return EnregistrementsTrouves;
-// End-Proc ;
