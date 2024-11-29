@@ -343,10 +343,6 @@ Dcl-Proc InitialisationProgramme;
     GestionErreurSQL();
    EndIf;
 
-   // Filtres articles
-   ECRANCODEARTICLEFILTRE = *Blanks;  
-   ECRANLIBELLE1ARTICLEFILTRE = *Blanks;
-
    //Gestion affichage/protection des quantités
     If (£Mode = VISUALISATION);
         Indicateur.ProtegerQuantiteRetournee=*On;
@@ -476,9 +472,7 @@ End-Proc;
 // Création clause Where
 // Permet de construire la clause where en fonction des filtres
 // Filtres disponibles :
-//  - Code article (exact)
 //  - type article doit être celui de la table XCOPAR
-//  - Libellé 1 article (contient)
 //
 // @Return : ClauseWhere char(2048)
 ///
@@ -488,21 +482,9 @@ Dcl-Proc CreationClauseWhere;
 
     Dcl-S ClauseWhere char(2048);
 
-    // Construction clause where de base avec Filtre libellé 1 article (contient)
-    ClauseWhere = 'WHERE UPPER(ALIAR1) LIKE ' + QUOTE +
-                      POURCENTAGE + %Trim(EcranLibelle1ArticleFiltre) + 
-                      POURCENTAGE + QUOTE;
-
-
-    ClauseWhere  = %trimr(ClauseWhere) + ' AND ACOTYA = '+ QUOTE 
+    // Filtre sur le type article
+    ClauseWhere = 'WHERE ACOTYA = '+ QUOTE 
     + ParametresConsigne.TypeArticle + QUOTE;
-    
-    // Filtre code article
-    If EcranCodeArticleFiltre <> *Blanks;
-        ClauseWhere = %trimr(ClauseWhere)
-                        + ' AND ACOART LIKE ' + QUOTE + 
-                        EcranCodeArticleFiltre + QUOTE;
-    EndIf;
 
     Return ClauseWhere;
 End-Proc;
