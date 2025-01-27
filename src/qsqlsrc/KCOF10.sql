@@ -5,8 +5,7 @@
 --
 -- Fichier de travail
 -- Permet de 
--- 1/verrouiller un numero de livraison en modification/création
--- 2/Passer les informations à d'autres programmes si nécessaire
+--  verrouiller un numero de livraison en modification/création
 -----------------------------------------------------------------------------
 --
 --    ECRIT   DU : 21/11/2024                 PAR : Ang (Antilles Glaces)
@@ -24,7 +23,7 @@ Create Table FIDVALSAC.KCOF10
 ) ;
 
 
-Label On Table FIDVALSAC.KCOF10 Is 'Consignes.: verr. et tsf. des livraisons';
+Label On Table FIDVALSAC.KCOF10 Is 'Consignes.: verrouillage des livraisons';
 
 -- Column headings are defined in 20-character sections
 

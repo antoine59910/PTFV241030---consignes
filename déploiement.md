@@ -6,3 +6,5 @@
 - Création KCOENT : Fichier des entêtes de livraisons
 - Création KCOLIG : Fichier des lignes de livraisons
 
+ - Création des mouvements de stocks( menu vals)
+ - Création d'un nouveau journalistaiton des mouvements de stocks(JNL)

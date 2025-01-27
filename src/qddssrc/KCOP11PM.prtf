@@ -1,0 +1,161 @@
+
+      *---------------------------------------------------------------*
+      * NOM         : KCOP11PM            TYPE : PRTF                 *
+      *                                                               *
+      * TITRE      : Suivi des articles consignés. 
+      *            : Gestion livraisons des consignes : saisies       *
+      *                                                               *
+      * UTILISE PAR : KCOP11                                          *
+      *                                                               *
+      * PARAMETRES : . PAGESIZE(70 132)                               *
+      *              . DEVTYPE(*SCS)                                  *
+      *              . LPI(6)                                         *
+      *              . CPI(10)                                        *
+      *              . OVRFLW(70)                                     *
+      *              . ALIGN(*NO)                                     *
+      *              . FORMTYPE(FACT)                                 *
+      *              . COPIES(1)                                      *
+      *              . SAVE(*NO)                                      *
+      *                                                               *
+      * ECRIT DU   : 29/11/2024            PAR : ANg (Antilles Glaces)*
+      *       AU   : 29/11/2024                                       *
+      *                                                               *
+      *---------------------------------------------------------------*
+      *
+      * Entête
+      *
+     A          R ENTETE                    SKIPB(1)
+     A                                     1'Bon de mise à disposition de consi'
+     A                                    35'gnes'
+     A                                    47'n° édition :'
+     A            ENUMER         8  0     60EDTCDE(4)
+     A                                      ALIAS(PRTF_NUMEROEDITION)
+     A                                      TEXT('PRTF_NUMEROEDITION')
+     A            ECOPRF        10        70ALIAS(PRTF_PROFILUTILISATEUR)
+     A                                      TEXT('PRTF_PROFILUTILISATEUR')
+     A            ECOPGM        10        81ALIAS(PRTF_PROGRAMME)
+     A                                      TEXT('PRTF_PROGRAMME')
+     A            EDATE           L       99DATFMT(*JOB)
+     A                                      DATSEP(*JOB)
+     A                                      ALIAS(PRTF_DATE)
+     A                                      TEXT('PRTF_DATE')
+     A            EHEURE          T      110TIMFMT(*HMS)
+     A                                      TIMSEP(*JOB)
+     A                                      ALIAS(PRTF_HEURE)
+     A                                      TEXT('PRTF_HEURE')
+     A            PAGE           5  0    120EDTCDE(4)
+     A                                      ALIAS(PRTF_NUMEROPAGE)
+     A                                      TEXT('PRTF_NUMEROPAGE')
+     A                                     1'DATLIV:'
+     A                                      SPACEB(1)
+     A            DATLIV          L        9ALIAS(PRTF_DATELIVRAISON)
+     A                                      TEXT('PRTF_DATELIVRAISON')
+     A                                      DATFMT(*JOB)
+      *
+     A          R LIGNE                     SPACEB(1)
+     A                                     1'-----------------------------------
+     A                                      ------------------------------------
+     A                                      ------------------------------------
+     A                                      ----------------------------'
+      *
+     A          R ENTSOC                    SPACEB(1)
+     A                                     1'COSTE:'
+     A            ECOSTE         2         8ALIAS(PRTF_SOCIETECODE)
+     A                                      TEXT('PRTF_DATELIVRAISON')
+     A                                     1'ZDSC01:'
+     A                                      SPACEB(1)
+     A            ZDSC01        45         9ALIAS(PRTF_ZDSC01)
+     A                                      TEXT('PRTF_ZDSC01')
+     A                                     1'ZDSC02:'
+     A                                      SPACEB(1)
+     A            ZDSC02        45         9ALIAS(PRTF_ZDSC02)
+     A                                      TEXT('PRTF_ZDSC02')
+     A                                     1'ZDSC03:'
+     A                                      SPACEB(1)
+     A            ZDSC03        45         9ALIAS(PRTF_ZDSC03)
+     A                                      TEXT('PRTF_ZDSC03')
+     A                                     1'ZDSC04:'
+     A                                      SPACEB(1)
+     A            ZDSC04        45         9ALIAS(PRTF_ZDSC04)
+     A                                      TEXT('PRTF_ZDSC04')
+     A                                     1'ZDSC05:'
+     A                                      SPACEB(1)
+     A            ZDSC05        45         9ALIAS(PRTF_ZDSC05)
+     A                                      TEXT('PRTF_ZDSC05')
+     A                                     1'ZDSC06:'
+     A                                      SPACEB(1)
+     A            ZDSC06        45         9ALIAS(PRTF_ZDSC06)
+     A                                      TEXT('PRTF_ZDSC06')
+     A                                     1'ZDSC07:'
+     A                                      SPACEB(1)
+     A            ZDSC07        45         9ALIAS(PRTF_ZDSC07)
+     A                                      TEXT('PRTF_ZDSC07')
+     A                                     1'ZDSC08:'
+     A                                      SPACEB(1)
+     A            ZDSC08        45         9ALIAS(PRTF_ZDSC08)
+     A                                      TEXT('PRTF_ZDSC08')
+     A                                     1'ZDSC09:'
+     A                                      SPACEB(1)
+     A            ZDSC09        45         9ALIAS(PRTF_ZDSC09)
+     A                                      TEXT('PRTF_ZDSC09')
+     A                                     1'ZDSC10:'
+     A                                      SPACEB(1)
+     A            ZDSC10        45         9ALIAS(PRTF_ZDSC10)
+     A                                      TEXT('PRTF_ZDSC10')
+      *
+     A          R ENTECLI                   SPACEB(1)
+     A                                     1'COCLI:'
+     A            ECOCLI         9         8ALIAS(PRTF_CLIENTCODE)
+     A                                      TEXT('PRTF_CLIENTCODE')
+     A                                    41'COKOM:'
+     A            ECOKOM         9        48ALIAS(PRTF_CLIENTCODEGROUPE)
+     A                                      TEXT('PRTF_CLIENTCODEGROUPE')
+     A                                     1'LISOC:'
+     A                                      SPACEB(1)
+     A            ELISOC        30         8ALIAS(PRTF_CLIENTLIBELLESOCIETE)
+     A                                      TEXT('PRTF_CLIENTLIBELLESOCIETE')
+     A                                    41'LIDES:'
+     A            ELIDES        30        48ALIAS(PRTF_CLIENTDESIGNATION)
+     A                                      TEXT('PRTF_CLIENTDESIGNATION')
+     A                                    80'LIRUE:'
+     A            ELIRUE        30        87ALIAS(PRTF_CLIENTRUE)
+     A                                      TEXT('PRTF_CLIENTRUE')
+     A                                     1'LIVIL:'
+     A                                      SPACEB(1)
+     A            ELIVIL        30         8ALIAS(PRTF_CLIENTVILLE)
+     A                                      TEXT('PRTF_CLIENTVILLE')
+     A                                    41'COPOS:'
+     A            ECOPOS         5        48ALIAS(PRTF_CLIENTCODEPOSTAL)
+     A                                      TEXT('PRTF_CLIENTCODEPOSTAL')
+     A                                    80'LIBDI:'
+     A            ELIBDI        25        87ALIAS(PRTF_CLIENTBUREAUDISTRIB)
+     A                                      TEXT('PRTF_CLIENTBUREAUDISTRIB')
+      *
+      * Lignes détail
+      *
+     A          R LIGNEART
+     A                                      SPACEB(2)
+     A                                     1'COART:'
+     A            ECOART        20         8ALIAS(PRTF_ARTICLECODE)
+     A                                      TEXT('PRTF_ARTICLECODE')
+     A                                    29'LIART:'
+     A            ELIART        30        36ALIAS(PRTF_ARTICLELIBELLE)
+     A                                      TEXT('PRTF_ARTICLELIBELLE')
+     A                                    67'QTLIV:'
+     A            EQTLIV         6  0     74EDTCDE(K)
+     A                                      ALIAS(PRTF_ARTICLEQUANTITE)
+     A                                      TEXT('PRTF_ARTICLEQUANTITE')
+     A                                    83'QTRET:'
+     A                                    95'PUNI:'
+     A            EPUNIA         6  2    101EDTCDE(3)
+     A                                      ALIAS(PRTF_PRIXUNITAIREARTICLE)
+     A                                      TEXT('PRTF_PRIXUNITAIREARTICLE')
+     A                                   114'PTOT:'
+     A            EPTOTL         8  2    120EDTCDE(3)
+     A                                      ALIAS(PRTF_PRIXTOTALLIGNE)
+     A                                      TEXT('PRTF_PRIXTOTALLIGNE')
+     A          R TOTAL                     SPACEB(1)
+     A                                   112'TOTAL:'
+     A            EPTOTT        10  2    120EDTCDE(3)
+     A                                      ALIAS(PRTF_PRIXTOTALCLIENT)
+     A                                      TEXT('PRTF_PRIXTOTALCLIENT')

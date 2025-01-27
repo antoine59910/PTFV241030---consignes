@@ -1,0 +1,67 @@
+/*--------------------------------------------------------------------------  */
+/*                     GESTION DES PARAMETRES D'IMPRESSION                    */
+/*--------------------------------------------------------------------------  */
+/* PROGRAMME   : OVRPRTFCL                                                    */
+ /* TYPE       : Programme CL                                                 */
+/* OBJECTIF   : Gestion des paramètres d'impression pour les sorties PRTF     */
+/*                                                                            */
+/* PARAMETRES :                                                               */
+/* - COEDI    : Code de l'édition (nom du fichier PRTF)                       */
+/* - NOUTQ    : File d'attente de sortie (format: BIBLIO/OUTQ)                */
+/* - USRDTA   : Données utilisateur pour l'en-tête (max 10 car.)              */
+/* - NBEXJ    : Nombre de copies à imprimer                                   */
+/* - SUSPE    : Suspendre l'impression (*YES/*NO)                             */
+/* - CONSE    : Conserver le fichier spoule (*YES/*NO)                        */
+/* - PRTTXT   : Texte d'en-tête personnalisé                                  */
+/*                                                                            */
+/* FONCTIONNEMENT :                                                           */
+/* Le programme applique les paramètres d'impression via OVRPRTF.             */
+/*                                                                            */
+/* PARTICULARITES :                                                           */
+/* - La commande OVRPRTF modifie temporairement les attributs                 */
+/*   d'impression pour le fichier spécifié                                    */
+/* - Ces modifications restent actives jusqu'à la fin du job                  */
+/*   ou jusqu'à l'exécution d'une commande DLTOVR                             */
+/*                                                                            */
+/* ECRIT DU   : 03/12/2024            PAR : ANg (Antilles Glaces)             */
+/*       AU   : 03/12/2024                                                    */
+/*                                                                            */
+/*----------------------------------------------------------------------------*/
+
+PGM        PARM(&COEDI &NOUTQ &USRDTA &NBEXJ &SUSPE &CONSE &PRTTXT)
+
+/* Déclaration des paramètres */             
+DCL        VAR(&COEDI) TYPE(*CHAR) LEN(10)    /* Nom du fichier PRTF */
+DCL        VAR(&NOUTQ) TYPE(*CHAR) LEN(20)    /* File d'attente (BIBLIO/OUTQ) */
+DCL        VAR(&USRDTA) TYPE(*CHAR) LEN(10)   /* Données utilisateur */
+DCL        VAR(&NBEXJ) TYPE(*DEC) LEN(2 0)    /* Nombre de copies */
+DCL        VAR(&SUSPE) TYPE(*CHAR) LEN(4)     /* Suspendre (*YES/*NO) */
+DCL        VAR(&CONSE) TYPE(*CHAR) LEN(4)     /* Conserver (*YES/*NO) */
+DCL        VAR(&PRTTXT) TYPE(*CHAR) LEN(30)   /* Texte d'en-tête */
+
+/* Validation des paramètres HOLD et SAVE */
+IF COND((&SUSPE *NE '*YES') *AND (&SUSPE *NE '*NO')) THEN(DO)
+   SNDPGMMSG  MSG('Valeur HOLD invalide - Doit être *YES ou *NO') 
+   GOTO       CMDLBL(FIN)
+ENDDO
+
+IF COND((&CONSE *NE '*YES') *AND (&CONSE *NE '*NO')) THEN(DO)
+   SNDPGMMSG  MSG('Valeur SAVE invalide - Doit être *YES ou *NO') 
+   GOTO       CMDLBL(FIN)
+ENDDO
+
+/* Application des paramètres d'impression avec gestion d'erreurs */
+OVRPRTF    FILE(&COEDI) + 
+           OUTQ(&NOUTQ) + 
+           PRTTXT(&PRTTXT) + 
+           COPIES(&NBEXJ) + 
+           HOLD(&SUSPE) + 
+           SAVE(&CONSE) + 
+           USRDTA(&USRDTA) 
+MONMSG     MSGID(CPF9801) EXEC(DO)
+   SNDPGMMSG  MSG('Erreur lors de la modification des paramètres d''impression')
+   GOTO       CMDLBL(FIN)
+ENDDO
+
+FIN:
+ENDPGM

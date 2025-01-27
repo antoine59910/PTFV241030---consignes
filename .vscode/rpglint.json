@@ -7,17 +7,13 @@
   "UppercaseConstants": true,
   "IncorrectVariableCase": true,
   "RequiresParameter": true,
-  "RequiresProcedureDescription": true,
+  "RequiresProcedureDescription": false,
   "StringLiteralDupe": false,
   "RequireBlankSpecial": false,
   "CopybookDirective": "include",
   "UppercaseDirectives": true,
   "NoGlobalsInProcedures": false,
   "SpecificCasing": [
-    {
-      "operation": "%timestamp",
-      "expected": "*TimeStamp"
-    },
     {
       "operation": "Dcl-S",
       "expected": "Dcl-S"
@@ -155,7 +151,7 @@
       "expected": "Zoned"
     }
   ],
-  "NoSQLJoins": true,
+  "NoSQLJoins": false,
   "PrettyComments": false,
   "NoUnreferenced": true,
   "SQLHostVarCheck": true,

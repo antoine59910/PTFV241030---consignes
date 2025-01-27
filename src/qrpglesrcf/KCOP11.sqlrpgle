@@ -7,9 +7,8 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 // CALL PGM(KCOP11) PARM(('LIVRAISON' (*CHAR 30)) ('CREATION' (*CHAR 30)) 
 // (75034677 (*DEC 8 0)))
 
-///
 // --------------------------------------------------------------
-//       NOM        : KCOP10              TYPE : Interactif
+//       NOM        : KCOP11              TYPE : Interactif & Batch
 //
 //  TITRE      : Suivi des articles consignés.: Gestion livraisons des consignes : saisies
 //
@@ -21,6 +20,7 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 //               - KCOENT : Table des entêtes des livraisons de consignes
 //               - KCOLIG : Table des lignes des livraisons de consignes
 //               - KCOCUM : Table des cumuls par clients (VCUMUL)
+//               - VRESTK : Table des mouvements de stocks
 //
 //              La validation d'une livraison édite un bon de mise à disposition
 //
@@ -55,56 +55,165 @@ Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
 // - Retournés
 //
 //  ECRIT DU   : 27/11/2024            PAR : ANg (Antilles Glaces)
-//        AU   : 27/11/2024
+//        AU   : 13/12/2024
 //
-/// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 Dcl-F KCOP11E  WorkStn
                SFile(GESTIONSFL:fichierDS.rang_sfl)//SFILE(Format:rang)
                InfDS(fichierDS)//Permet d'avoir des informations sur le sous-fichier en cours
                IndDs(Indicateur)
                Alias;//pour mettre les indicateurs dans une DS et les nommer
 
+Dcl-F KCOP11PM Printer OfLind(Ind_FinDePagePRTF) alias;
 
 // --- Tables -------------------------------------------------------
 //Entête des livraisons/retour
 Dcl-Ds KCOENT_t extname('KCOENT') qualified template;
 End-Ds;
 //Lignes des livraisons/retour
-Dcl-Ds KCOLIG_t extname('KCOLIG') qualified template;
+Dcl-Ds KCOLIG_t extname('KCOLIG')  qualified template alias;
 End-Ds;
 //Consignes : Cumul des articles par clients
-Dcl-Ds KCOCUM_t extname('KCOCUM') qualified template;
+Dcl-Ds KCOCUM_t extname('KCOCUM') qualified template alias;
 End-Ds;
+//Mouvements de stock en attente d'intégration
+Dcl-Ds VRESTK_t extname('VRESTK') qualified template;
+End-Ds;
+
+//Variables pour K£PIMP
+Dcl-Ds K£PIMP qualified ;
+    p_CodeEdition char(10);
+    p_CodeModule Char(2);
+    p_User Char(10);
+    r_outq char(20);
+    r_nbexj char(2);    
+    r_nbexs char(2);
+    r_nbexm char(2);
+    r_suspe char(4);  //C est le paramètre HOLD de OVRPRTF qui permet de        suspendre 
+                    //le fichier spoule avant impression (hold=*YES/hold=*NO)
+    r_conserver char(4);
+End-Ds;
+
+
 //TABVV XCOPAR
 Dcl-Ds ParametresConsigne qualified;
     XLIPAR Char(100);
     TypeArticle Char(1) Overlay(XLIPAR);
-    CodeMouvement Char(2) Overlay(XLIPAR:*NEXT);
+    CodeMouvementEntree Char(2) Overlay(XLIPAR:*NEXT);
     TopPrealimentationRetour Char(1) Overlay(XLIPAR:*NEXT);
-    NombreExemplairesBL Packed(2:0) Overlay(XLIPAR:*NEXT);
+    NombreExemplairesBL Char(2) Overlay(XLIPAR:*NEXT);
+    CodeDepotConsignes Char(3) Overlay(XLIPAR:*NEXT);
+    CodeMouvementSortie Char(2) Overlay(XLIPAR:*NEXT);
 End-Ds;
+
+//Societe
+Dcl-Ds Societe qualified;
+    Code Char(2);
+    Libelle Char(26);
+    BilbiothequeFichier Char(9);
+End-Ds;
+
+Dcl-Ds VRESTKDS Qualified;
+    CodeSociete                   Char(2);
+    CodeDepot                     Char(3);
+    NumeroMouvement               Zoned(8:0);
+    MouvementJour                 Zoned(2:0);
+    MouvementMois                 Zoned(2:0);
+    MouvementSiecle               Zoned(2:0);
+    MouvementAnnee                Zoned(2:0);
+    CodeMouvement                 Char(2);
+    CodeArticle                   Char(20);
+    QuantiteMouvement             Zoned(11:3);
+    CodeSection                   Char(9);
+    CodeProjet                    Char(9);
+    CodeUniteDeGestion            Char(3);
+    PrixUnitaireMouvement         Zoned(13:4);
+    CodeEdition                   Char(1);
+    PumpAnterieur                 Zoned(13:4);
+    QuantiteAcheteeDelaisAppro    Zoned(13:3);
+    QuantiteModifiantEncours      Zoned(13:3);
+    PrixAchat_Fabrication         Zoned(13:4);
+    CodeGenerationCompta          Char(1);
+    LibelleMouvement              Char(30);
+    RefMouvementNumBLNumRecep     Char(8);
+    Emplacement                   Char(7);
+    Lot                           Char(13);
+    ElementDeLot                  Char(8);
+    CodeProfil                    Char(10);
+    CreationJour                  Zoned(2:0);
+    CreationMois                  Zoned(2:0);
+    CreationAnnee                 Zoned(2:0);
+    CreationSiecle                Zoned(2:0);
+    NomProgramme                  Char(10);
+    ModifHeure                    Zoned(2:0);
+    ModifMinute                   Zoned(2:0);
+    ModifSeconde                  Zoned(2:0);
+    VALS                          Char(1);
+    CodeEtablissement             Char(3);
+    NumeroDePoste                 Zoned(3:0);
+    TopReaj                       Char(1);
+    ClientOuFournisseur           Char(9);
+    DesignationMouvement          Char(15);
+    DepotTransf                   Char(3);
+    QuantiteLogistique            Zoned(11:3);
+    VariableLogistique            Char(2);
+    VariablePromo                 Char(2);
+    FlagTop1                      Char(1);
+    FlagTop2                      Char(1);
+    SpecifAlpha25                 Char(25);
+End-Ds;
+
 
 // --- Appel de PGM  --------------------------------------------------
 // Fenêtre utilisateur
 /DEFINE PR_GOAFENCL
 // Fenêtre service
 /DEFINE PR_GOASER
+// Récupération données clients
+/DEFINE PR_VMRICL
+// Permet de savoir si la quantité en stock est suffisante
+/DEFINE PR_VMTSTP   
+// Recherche tarifaire
+/DEFINE PR_VMRPUT 
+// Acceptation mouvements de stock VRESTK
+/DEFINE PR_VSLMVT2 
 
 /INCLUDE qincsrc,prototypes
 
 /UNDEFINE PR_GOAFENCL
 /UNDEFINE PR_GOASER
+/UNDEFINE PR_VMRICL
+/UNDEFINE PR_VMTSTP
+/UNDEFINE PR_VSLMVT2 
+
+
+// Permet de faire des commandes CL
+Dcl-Pr QCMDEXC ExtPgm('QCMDEXC') ;
+    cde Char(200) const;
+    cdl Packed(15:5) const;
+End-Pr ;
+
+
+// Prototype pour K£PIMP 
+Dcl-Pr KPIMP extpgm('K£PIMP');
+    p_coedi char(8);
+    p_comod char(2);
+    p_coprf char(10);
+    p_noutq char(10);
+    p_nbexj char(2);
+    p_nbexs char(2);
+    p_nbexm char(2);
+    p_suspe char(4);
+    p_conse char(4);
+End-Pr;
+
 
 // --- Variables -------------------------------------------------------
 Dcl-S NombreTotalLignesSF Packed(4:0);
 Dcl-S Fin ind;
+Dcl-S FinFenetre ind;
 Dcl-S Refresh ind;
-Dcl-Ds Societe qualified;
-    Code Char(2);
-    Libelle Char(26);
-    BilbiothequeFichier Char(9);
-End-Ds;
-Dcl-s Compteur Packed(10:0);
+Dcl-S CommandeCL varChar(200);
 
 // --- Constantes -------------------------------------------------------
 Dcl-C LIVRAISON 'LIVRAISON';
@@ -113,27 +222,37 @@ Dcl-C CREATION 'CREATION';
 Dcl-C MODIFICATION 'MODIFICATION';
 Dcl-C VISUALISATION 'VISUALISATION';
 Dcl-C TABVV_PARAMETRESCONSIGNE 'XCOPAR';
+Dcl-C TABVV_FLAG_REMISE_CLIENT 'AFFREM';
+Dcl-C TABLE_CHARTREUSE_MOUVEMENT_STOCK_NUM 'NUMT';
 Dcl-C QUOTE '''';
 Dcl-C ESPACE ' ';
 Dcl-C POURCENTAGE '%';
-
+Dcl-S CODEVERBE Char(3) Inz('GER');
+Dcl-S CODEOBJET Char(6) Inz('LIVCON');
+Dcl-S PRTF_CODE_MODULE Char(2) Inz('CO');  // Code module pour KPIMP
+Dcl-S PRTF_CODE_EDITION Char(10) Inz('KCOP11PM'); // Code édition pour KPIMP
+Dcl-S ENTREE_STOCK char(1) Inz('E');
+Dcl-S SORTIE_STOCK char(1) Inz('S');
 
 // --- Data-structures Indicateurs--------------------------------------
 Dcl-Ds Indicateur qualified;
+  // Contrôles principaux
+    GESTIONCTL_SousFichierDisplay           Ind Pos(51);  
+    GESTIONCTL_SousFichierDisplayControl    Ind Pos(52);
+    GESTIONCTL_SousFichierClear             Ind Pos(53);
+    GESTIONCTL_SousFichierEnd               Ind Pos(54);
 
-    SousFichierDisplay                              Ind Pos(51);
-    SousFichierDisplayControl                       Ind Pos(52);
-    SousFichierClear                                Ind Pos(53);
-    SousFichierEnd                                  Ind Pos(54);
+  //Messages d erreurs
+    GESTIONCTL_SFLMSG_QuantiteSuperieureAuDispo Ind Pos(30); 
 
-    // Indicateurs d'affichage
-    MasquerMessageErreur                        Ind Pos(82);
-    MasquerMessageInfo                          Ind Pos(83);
-    MasquerQuantiteRetournee                    Ind Pos(40);
-    ProtegerQuantiteRetournee                   Ind Pos(41);
-    ProtegerQuantiteLivree                      Ind Pos(42);
-
-End-Ds ;
+  // Indicateurs affichage (DSPATR)
+    GESTIONBAS_MasquerMessageErreur           Ind Pos(82); 
+    GESTIONBAS_MasquerMessageInfo             Ind Pos(83);
+    GESTIONSFL_MasquerQuantiteRetournee       Ind Pos(40);
+    GESTIONSFL_ProtegerQuantiteRetournee      Ind Pos(41);
+    GESTIONSFL_ProtegerQuantiteLivree         Ind Pos(42);
+    GESTIONSFL_RI_QuantiteSuperieureAuDispo   Ind Pos(43);
+End-Ds;
 
 
 // --- Data-structure système ------------------------------------------
@@ -170,14 +289,125 @@ ChargerSousFichier();
 
 Fin = *Off;
 DoW not Fin;
-    AffichageEcran();
+
+    // Affichage de l écran avec attente de saisie
+    Write GESTIONBAS;
+    ExFmt GESTIONCTL;
 
     // Traitement des actions
-    Action();
+    Select;
+        When fichierDS.TouchePresse = F2;
+            AffichageFenetreUtilisateur(CODEVERBE:CODEOBJET);
 
-    // Si rafraîchissement nécessaire, rechargement du sous-fichier
+            //Gestion de la fin et mise à jour
+        When fichierDS.TouchePresse = F3;
+            ChargementEcranValidation();
+            FinFenetre = *Off;
+            DoW not FinFenetre;
+                
+                EXFMT FMFIN;
+                    // Suite du programme en fonction du choix de l utilisateur
+                    // 1 : mise à jour et retour écran gar
+                    // 2 : pas de mise à jour et retour écran gar
+                    // 3 : mise à jour, gestion des écritures en fonction de l action et fin
+                    // 4 : fin de programme sans mise à j.
+                    // 5 : reprise
+                Select;
+                    When EcranFinChoixAction = 1 AND EcranFinChoix1 <> '*';
+                        If Verification();
+                            EcritureTables();
+                                //Gestion de l édition du PRTF
+                            If £Operation = LIVRAISON And (£Mode=MODIFICATION OR £Mode=CREATION);
+                                EditionPRTF();
+                            EndIf;
+                            Refresh=*On;
+                        Else;
+                            Indicateur.GESTIONBAS_MasquerMessageErreur=*off;
+                            EcranMessageErreur = 'Erreur de saisie';
+                        EndIf;
+                        FinFenetre=*On;
+
+                    When EcranFinChoixAction = 2 AND EcranFinChoix2 <> '*';
+                        FinFenetre=*On;
+                        Refresh=*On;
+
+                    When EcranFinChoixAction = 3 AND EcranFinChoix3 <> '*';
+                        // Gestion des différentes fin possibles du programme 
+                        // en fonction de l action utilisateur
+                        Select;
+
+                            // - Création d une livraison
+                            When £Mode = CREATION And £Operation = LIVRAISON;
+
+                                EditionPRTF();
+
+                            // - Modification d une livraison
+                            When £Mode = MODIFICATION And £Operation = LIVRAISON;
+
+                                EditionPRTF();
+
+                            // - Visualisation d une livraison
+                            When £Mode = VISUALISATION And £Operation = LIVRAISON;
+
+                            // - Création d un retour
+                            When £Mode = CREATION And £Operation = RETOUR;
+
+                            // - Modification d un retour
+                            When £Mode = MODIFICATION And £Operation = RETOUR;
+
+                            // - Visualisation d un retour
+                            When £Mode = VISUALISATION And £Operation = RETOUR;
+
+
+                                // If £Mode <> VISUALISATION;
+                                //     If Verification();
+                                //         EcritureTables();
+                                //     //Gestion de l édition du PRTF
+                                //         If £Operation = LIVRAISON 
+                                // And (£Mode=MODIFICATION OR £Mode=CREATION);
+                                //             EditionPRTF();
+                                //         EndIf;
+                                //         Fin = *On;
+                                //     Else;
+                                //         Indicateur.GESTIONBAS_MasquerMessageErreur=*off;
+                                //         EcranMessageErreur = 'Erreur de saisie';
+                                //     EndIf;
+                                // EndIf;
+                                // FinFenetre = *On;
+
+                            Other;
+                            
+                        EndSl;
+
+                    When EcranFinChoixAction = 4 AND EcranFinChoix4 <> '*';
+                        FinFenetre = *On;
+                        Fin = *On;
+                            
+                    When EcranFinChoixAction = 5;
+                        FinFenetre = *On;
+                        Refresh=*On;
+
+                    Other;
+                EndSl;
+            EndDo;
+
+        When fichierDS.TouchePresse = F6;
+            AffichageFenetreServices();
+
+        When fichierDS.TouchePresse = F12;
+            Fin=*On;
+
+        When  fichierDS.touchePresse = ENTREE;
+            If not Verification();
+                Indicateur.GESTIONBAS_MasquerMessageErreur=*off;
+                EcranMessageErreur = 'Erreur de saisie';
+            EndIf;
+        Other;
+    EndSl;
+
+        // Si rafraîchissement nécessaire, rechargement du sous-fichier
     If Refresh;
-         ChargerSousFichier();
+        ChargerSousFichier();
         Refresh = *Off;
     EndIf;
 
@@ -199,7 +429,7 @@ EndDo;
 // Traitements : 
 // 1. Initialisation des variables globales
 //    - Indicateurs de fin de programme et de rafraîchissement
-//    - Messages d'erreur et d'information
+//    - Messages d erreur et d information
 //
 // 2. Récupération des paramètres société/consignes
 //    - Code et libellé société (TABVV STE)
@@ -208,100 +438,100 @@ EndDo;
 //
 // 3. Initialisation écran
 //    - Masquage messages 
-//    - Préparation sous-fichier
-//    - Initialisation en-têtes (client, livraison, facture, etc.)
+//    - Préparation sous fichier
+//    - Initialisation en tetes (client, livraison, facture, etc.)
 //    - RAZ des filtres articles
 ///
 Dcl-Proc InitialisationProgramme;
    //--- 1. Initialisation des variables globales ---
-   Fin = *Off;                           
-   Refresh = *Off;                      
+    Fin = *Off;                           
+    Refresh = *Off;                      
 
    //--- 2. Récupération paramètres ---
    // Informations société
-   Societe.Code = GetCodeSociete();
-   Societe.Libelle = GetLibelleSociete();
-   If Societe.Libelle = *Blanks;
-       EcranLibelleSociete = *ALL'?';
-   Else;
-       EcranLibelleSociete = Societe.Libelle;
-   EndIf;
-   Societe.BilbiothequeFichier = GetBibliothequeFichierSociete();
+    Societe.Code = GetCodeSociete();
+    Societe.Libelle = GetLibelleSociete();
+    If Societe.Libelle = *Blanks;
+        EcranLibelleSociete = *ALL'?';
+    Else;
+        EcranLibelleSociete = Societe.Libelle;
+    EndIf;
+    Societe.BilbiothequeFichier = GetBibliothequeFichierSociete();
 
 
    // Paramètres consignes
-   Exec SQL
+    Exec SQL
        Select XLIPAR
        Into :ParametresConsigne.XLIPAR
        FROM VPARAM
        Where XCORAC = :TABVV_PARAMETRESCONSIGNE 
        and XCOARG = :Societe.Code;
-   GestionErreurSQL();
+    GestionErreurSQL();
    
 
    //--- 3. Initialisation écran ---
    // Messages
-   Indicateur.MasquerMessageErreur = *On;
-   Indicateur.MasquerMessageInfo = *On;
-   ECRANMESSAGEERREUR = *Blanks;
-   ECRANMESSAGEINFO = *Blanks;
+    Indicateur.GESTIONBAS_MasquerMessageErreur = *On;
+    Indicateur.GESTIONBAS_MasquerMessageInfo = *On;
+    ECRANMESSAGEERREUR = *Blanks;
+    ECRANMESSAGEINFO = *Blanks;
 
    // Sous-fichier
-   Indicateur.SousFichierClear = *On;
-   Write GESTIONCTL;
-   Indicateur.SousFichierClear = *Off;
-   Indicateur.SousFichierDisplay = *On;
-   Indicateur.SousFichierEnd = *On;
-   Indicateur.SousFichierDisplayControl = *On;
+    Indicateur.GESTIONCTL_SousFichierClear = *On;
+    Write GESTIONCTL;
+    Indicateur.GESTIONCTL_SousFichierClear = *Off;
+    Indicateur.GESTIONCTL_SousFichierDisplay = *On;
+    Indicateur.GESTIONCTL_SousFichierEnd = *On;
+    Indicateur.GESTIONCTL_SousFichierDisplayControl = *On;
 
    // En-têtes
-   //Dans le cas d'une création de livraison : 
-   If (£Mode = CREATION);
-    EcranNumeroEdition = 0;
+   //Dans le cas d une création de livraison : 
+    If (£Mode = CREATION And £Operation=LIVRAISON);
+        EcranNumeroEdition = 0;
 
-    Exec SQL
-    SELECT DISTINCT 
-        V.ENULIV as numeroLivraison,
-        V.ENUFAC as numeroFacture, 
-        V.ECOTRA as codeTournee, 
-        V.ECOCLL as codeClient,
-        C.CLISOC as nomCommercial,
-        C.CLIDES as raisonSociale,
-        CASE 
-            WHEN V.EJJDLV > 0 AND V.EMMDLV > 0 AND V.EAADLV > 0 
-            THEN DATE(
-                CAST(
-                    CASE 
-                        WHEN V.EXXDLV = 0 THEN '20'
-                        ELSE DIGITS(V.EXXDLV)
-                    END 
-                    || RIGHT('00' || DIGITS(V.EAADLV), 2)
-                    || '-'
-                    || RIGHT('00' || DIGITS(V.EMMDLV), 2)
-                    || '-' 
-                    || RIGHT('00' || DIGITS(V.EJJDLV), 2)
-                    AS VARCHAR(10)
-                )
-            )
-            ELSE NULL
-            END AS dateLivraison
-    Into 
-            :ECRANNUMEROLIVRAISON, 
-            :ECRANNUMEROFACTURE, 
-            :ECRANNUMEROTOURNEE,
-            :ECRANCODECLIENT, 
-            :ECRANNOMCOMMERCIALCLIENT, 
-            :ECRANRAISONSOCIALECLIENT, 
-            :ECRANDATELIVRAISON
-    FROM VENTLV V
-    LEFT JOIN CLIENT C ON C.CCOCLI = V.ECOCLL
-    where V.ENULIV = :£NumeroLivraison;
-    GestionErreurSQL();
+        Exec SQL
+            SELECT DISTINCT 
+                V.ENULIV as numeroLivraison,
+                V.ENUFAC as numeroFacture, 
+                V.ECOTRA as codeTournee, 
+                V.ECOCLL as codeClient,
+                C.CLISOC as nomCommercial,
+                C.CLIDES as raisonSociale,
+                CASE 
+                    WHEN V.EJJDLV > 0 AND V.EMMDLV > 0 AND V.EAADLV > 0 
+                    THEN DATE(
+                        CAST(
+                            CASE 
+                                WHEN V.EXXDLV = 0 THEN '20'
+                                ELSE DIGITS(V.EXXDLV)
+                            END 
+                            || RIGHT('00' || DIGITS(V.EAADLV), 2)
+                            || '-'
+                            || RIGHT('00' || DIGITS(V.EMMDLV), 2)
+                            || '-' 
+                            || RIGHT('00' || DIGITS(V.EJJDLV), 2)
+                            AS VARCHAR(10)
+                        )
+                    )
+                    ELSE NULL
+                    END AS dateLivraison
+            Into 
+                    :ECRANNUMEROLIVRAISON, 
+                    :ECRANNUMEROFACTURE, 
+                    :ECRANNUMEROTOURNEE,
+                    :ECRANCODECLIENT, 
+                    :ECRANNOMCOMMERCIALCLIENT, 
+                    :ECRANRAISONSOCIALECLIENT, 
+                    :ECRANDATELIVRAISON
+            FROM VENTLV V
+            LEFT JOIN CLIENT C ON C.CCOCLI = V.ECOCLL
+            where V.ENULIV = :£NumeroLivraison;
+        GestionErreurSQL();
 
-   Else;
+    Else;
 
     //Sinon, on récupère les informations également dans la table KCOENT
-    exec SQL
+        exec SQL
     SELECT DISTINCT 
             K.NUMEROLIVRAISON as numeroLivraison,
             K.numeroedition as numeroEdition,
@@ -340,21 +570,22 @@ Dcl-Proc InitialisationProgramme;
     LEFT JOIN VENTLV V ON V.ENULIV = K.NUMEROLIVRAISON
     LEFT JOIN CLIENT C ON C.CCOCLI = V.ECOCLL
     Where K.NUMEROLIVRAISON = :£NumeroLivraison;
-    GestionErreurSQL();
-   EndIf;
+        GestionErreurSQL();
+    EndIf;
 
    //Gestion affichage/protection des quantités
     If (£Mode = VISUALISATION);
-        Indicateur.ProtegerQuantiteRetournee=*On;
-        Indicateur.ProtegerQuantiteLivree=*On;
+        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
+        Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*On;
     Else;
-        Indicateur.ProtegerQuantiteRetournee=*Off;
-        Indicateur.ProtegerQuantiteLivree=*Off;
+        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*Off;
+        Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*Off;
     EndIf;
     If (£Operation = LIVRAISON);
-        Indicateur.MasquerQuantiteRetournee=*On;
+        Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*On;
+        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
     Else;
-        Indicateur.MasquerQuantiteRetournee=*Off;
+        Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*Off;
     EndIf;
 End-Proc;
 
@@ -362,7 +593,7 @@ End-Proc;
 ///
 // ChargerSousFichier()
 // Charge le sous-fichier 
-// Initialise les positions d'affichage et le curseur
+// Initialise les positions d affichage et le curseur
 ///
 Dcl-Proc ChargerSousFichier;
     Dcl-Pi *n ;
@@ -376,9 +607,16 @@ Dcl-Proc ChargerSousFichier;
     Dcl-S ClauseOrderBy char(2048);
 
     // Nettoyage initial du sous-fichier
-    Indicateur.SousFichierClear = *On;
+    Indicateur.GESTIONCTL_SousFichierClear = *On;
     Write GESTIONCTL;
-    Indicateur.SousFichierClear = *Off;
+    Indicateur.GESTIONCTL_SousFichierClear = *Off;
+
+    //Initialisation des messages erreur/info
+    Indicateur.GESTIONBAS_MasquerMessageErreur = *On;  
+    ECRANMESSAGEERREUR = *BLANKS;
+    Indicateur.GESTIONBAS_MasquerMessageInfo = *On;
+    ECRANMESSAGEINFO = *BLANKS;
+    Indicateur.GESTIONCTL_SFLMSG_QuantiteSuperieureAuDispo = *Off;
 
     // Initialisation du rang
     fichierDS.rang_sfl = 0;
@@ -414,9 +652,9 @@ Dcl-Proc ChargerSousFichier;
             :ECRANLIGNELIBELLE1ARTICLE;
     GestionErreurSQL();
 
-    If SQLCode = 100; //Aucun enregistrement n'a été trouvé
+    If SQLCode = 100; //Aucun enregistrement n a été trouvé
         ECRANMESSAGEERREUR = 'Aucun article trouvé';
-        Indicateur.MasquerMessageErreur = *Off;
+        Indicateur.GESTIONBAS_MasquerMessageErreur = *Off;
         
     ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
         DoW SQLCode = 0;
@@ -434,12 +672,22 @@ Dcl-Proc ChargerSousFichier;
                 From KCOLIG
                 Where numeroLivraison = :£NumeroLivraison 
                 AND codeArticle = :EcranLigneCodeArticle;
-                If SQLCode = 100; //Pas d'enregistrement trouvé
-                    EcranLigneQuantiteLivree = 0;
-                    EcranLigneQuantiteRetournee = 0;
-                Else;
-                    GestionErreurSQL();
-                EndIf;
+               
+                // Si on est en création de retour, 
+                // on vérifie le paramètre de consignes de pré-alimentation
+                // Si il est à "O", on indique les valeurs de retour
+                //  identique au valeurs de quantité livrée
+            If £Mode = CREATION And £Operation = RETOUR 
+                And ParametresConsigne.TopPrealimentationRetour = 'O';
+                EcranLigneQuantiteRetournee = EcranLigneQuantiteLivree;
+            EndIf;
+                
+            If SQLCode = 100; //Pas d enregistrement trouvé
+                EcranLigneQuantiteLivree = 0;
+                EcranLigneQuantiteRetournee = 0;
+            Else;
+                GestionErreurSQL();
+            EndIf;
 
             // Écriture dans le sous-fichier  
             Write GESTIONSFL;
@@ -460,13 +708,23 @@ Dcl-Proc ChargerSousFichier;
 
     // Mémorisation du nombre total de lignes
     NombreTotalLignesSF = fichierDS.rang_sfl;
+
+    // Pour afficher un sous-fichier vide, 
+    //on ne doit PAS activer l affichage du sous-fichier si il est vide 
+    If NombreTotalLignesSF > 0;
+        Indicateur.GESTIONCTL_SousFichierDisplay = *On;
+    Else;
+        Indicateur.GESTIONCTL_SousFichierDisplay = *Off;
+    EndIf;
+    
+    Indicateur.GESTIONCTL_SousFichierDisplayControl = *On;
+    Indicateur.GESTIONCTL_SousFichierEnd = *On;
     
     // Positionnement initial
     EcranLigneSousFichier = 1;
-    EcranDeplacerCurseurLigne = 8;
+    EcranDeplacerCurseurLigne = 7;
     EcranDeplacerCurseurColonne = 61;  
 End-Proc;
-
 
 ///
 // Création clause Where
@@ -490,66 +748,934 @@ Dcl-Proc CreationClauseWhere;
 End-Proc;
 
 ///
-// AffichageEcran
-// Gère l'affichage de l'écran et du sous-fichier
+// ChargementEcranValidation
+// Gère les différentes options possibles pour une fin de travail du programme
+//
 ///
-Dcl-Proc AffichageEcran;
-    // Pour afficher un sous-fichier vide, 
-    //on ne doit PAS activer l'affichage du sous-fichier s'il est vide 
-    If NombreTotalLignesSF > 0;
-        Indicateur.SousFichierDisplay = *On;
-    Else;
-        Indicateur.SousFichierDisplay = *Off;
-    EndIf;
-    
-    Indicateur.SousFichierDisplayControl = *On;
-    Indicateur.SousFichierEnd = *On;
-
-    // Affichage de l'écran avec attente de saisie
-    Write GestionBas;
-    ExFmt GESTIONCTL;
-End-Proc;
-
-
-///
-// Action
-// Gestion des différentes actions possibles de l'utilisateur
-///
-Dcl-Proc Action;
-
-    Dcl-s CodeVerbe char(3) inz('GER');
-    Dcl-s CodeObjet char(6) inz('LIVCON');
-    Indicateur.MasquerMessageErreur = *On;  
-    ECRANMESSAGEERREUR = *BLANKS;
-    Indicateur.MasquerMessageInfo = *On;
-    ECRANMESSAGEINFO = *BLANKS;
+Dcl-Proc ChargementEcranValidation;
+    Dcl-Pi *n;
+    End-Pi;
 
     Select;
-        When fichierDS.TouchePresse = F2;
-            AffichageFenetreUtilisateur(CodeVerbe:CodeObjet);
-
-        When fichierDS.TouchePresse = F3;
-            Fin=AffichageEcranValidation();
-            Refresh=*On;
-
-        When fichierDS.TouchePresse = F6;
-            AffichageFenetreServices();
-
-        When fichierDS.TouchePresse = F12;
-            Fin=*On;
-
-        When  fichierDS.touchePresse = ENTREE;
-            
-        Other;
+        When £Mode = CREATION ;
+            EcranFinChoix1 = '*';
+            EcranFinChoix2 = '2';
+            EcranFinChoix3 = '3';
+            EcranFinChoix4 = '4';
+            EcranFinChoixAction =  3;
+        When £Mode = MODIFICATION;
+            EcranFinChoix1 = '1';
+            EcranFinChoix2 = '2';
+            EcranFinChoix3 = '3';
+            EcranFinChoix4 = '4';
+            EcranFinChoixAction =  3;
+        When £Mode = VISUALISATION;
+            EcranFinChoix1 = '*';
+            EcranFinChoix2 = '2';
+            EcranFinChoix3 = '*';
+            EcranFinChoix4 = '4';
+            EcranFinChoixAction =  5;
+        other;
+            EcranFinChoix1 = '*';
+            EcranFinChoix2 = '2';
+            EcranFinChoix3 = '*';
+            EcranFinChoix4 = '4';
+            EcranFinChoixAction =  5;
     EndSl;
-  
 End-Proc;
 
+///
+// Verification
+//  - La quantité saisie n est pas supérieure à la quantité en stock dans le dépôt
+///
+Dcl-Proc Verification;
+
+    Dcl-Pi *n Ind end-pi;
+
+    Dcl-S Erreur	Ind Inz(*Off);
+    Dcl-S i	Zoned(4:0);
+    Dcl-S KCOLIG_AncienneQuantiteLivree Packed(4:0); 
+    Dcl-S CurseurPositionne Ind Inz(*Off);
+
+
+//Initialisation des indicateurs d erreurs généraux
+    Indicateur.GESTIONCTL_SFLMSG_QuantiteSuperieureAuDispo = *Off;
+    Indicateur.GESTIONBAS_MasquerMessageErreur = *On;
+    Indicateur.GESTIONBAS_MasquerMessageInfo = *On;
+
+// Boucle de vérification
+    For i = 1 to NombreTotalLignesSF;
+        Chain i GESTIONSFL;
+
+        //Initialisation des indicateurs d erreurs par lignes
+        Indicateur.GESTIONSFL_RI_QuantiteSuperieureAuDispo = *Off;
+
+        //   - la quantité doit être inférieure au stock disponible
+        If ( Erreur = *Off And EcranLigneQuantiteLivree <> 0);
+
+            Select;
+                when £Mode=CREATION And (£Operation = LIVRAISON OR £Operation = RETOUR);
+                    VMTSTP.UQTUNG = EcranLigneQuantiteLivree;
+        
+                when £Mode=MODIFICATION And 
+                (£Operation = LIVRAISON OR £Operation = RETOUR);
+                //On doit récupérer l ancienne quantité saisie 
+                //et si elle est supérieur à la quantité actuellement saisie, 
+                //on vérifie si la différence de cette quantité est bien disponible dans le stock
+                    Exec SQL
+                    Select QUANTITELIVREE
+                    Into :KCOLIG_AncienneQuantiteLivree
+                    From KCOLIG
+                    Where NumeroLivraison = :£NumeroLivraison
+                    And CodeArticle = :EcranLigneCodeArticle;
+                    If SQLCODE = 0;
+                        If (EcranLigneQuantiteLivree > KCOLIG_AncienneQuantiteLivree);
+                            VMTSTP.UQTUNG = 
+                            EcranLigneQuantiteLivree - KCOLIG_AncienneQuantiteLivree;
+                        Else;
+                            VMTSTP.UQTUNG = 0;
+                        EndIf;
+                    ElseIf SQLCODE = 100;
+                    //Aucune ligne trouvée
+                        VMTSTP.UQTUNG = EcranLigneQuantiteLivree;
+                    Else;
+                        GestionErreurSQL();
+                    EndIf;
+
+
+                other;
+            EndSl;
+
+            VMTSTP.UCOSTE = Societe.Code;
+            VMTSTP.UCODEP = ParametresConsigne.CodeDepotConsignes;
+            VMTSTP.UCOART = EcranLigneCodeArticle;
+            VMTSTP.UCORET = *BLANKS;
+            VMTSTP.UQTRES = 0;//Quantité restante
+
+        //Appel du programme pour savoir si la quantité est disponible en stock
+            If VMTSTP.UQTUNG > 0 ;
+
+                PR_VMTSTP(
+                        VMTSTP.UCoSTE
+                        :VMTSTP.UCODEP
+                        :VMTSTP.UCOART
+                        :VMTSTP.UQTUNG
+                        :VMTSTP.UCORET
+                        :VMTSTP.UQTRES);
+                If (VMTSTP.UCoRET = '1');
+                    Indicateur.GESTIONSFL_RI_QuantiteSuperieureAuDispo = *On;
+                    Indicateur.GESTIONCTL_SFLMSG_QuantiteSuperieureAuDispo = *On;
+                    Erreur = *On;
+
+                // Positionne le curseur sur la première erreur trouvée
+                    If Not CurseurPositionne;
+                        //+6 car le sous-fichier commence à la ligne 7
+                        EcranDeplacerCurseurLigne = i + 6;
+                        // Colonne de la quantité livrée
+                        EcranDeplacerCurseurColonne = 61; 
+                        CurseurPositionne = *On;
+                    EndIf;
+                Else;
+                EndIf;
+            EndIf;
+        EndIf;
+       
+        Update GESTIONSFL;
+    EndFor;
+
+    Return not Erreur;
+End-Proc;
+
+
+/// ------------------------------------------------------------------------------------
+// EcritureTables()
+//
+// Ecris dans les tables suivantes :
+// Fichier des entêtes des livraisons de consignes : KCOENT
+// Fichier des lignes des livraisons de consignes : KCOLIG
+// Fichier des cumuls de consignes par client : KCOCUM
+// Fichier des mouvements de stocks en attente : VRESTK
+// Appel de la procédure d intégration des mouvements de stocks dans VRESTK
+/// ------------------------------------------------------------------------------------
+Dcl-Proc EcritureTables;
+
+    Dcl-S i            Zoned(4:0);
+    Dcl-S KCOCUMExiste Ind;
+
+    //VRESTK
+    Dcl-S QuantiteVRESTK Packed(4:0);
+
+    //KCOCUM
+    Dcl-Ds OLD_KCOCUM likeDs(KCOCUM_t);
+    Dcl-Ds NEW_KCOCUM likeDs(KCOCUM_t);
+
+    //KCOLIG
+    Dcl-Ds OLD_KCOLIG likeDs(KCOLIG_t);
+    Dcl-Ds NEW_KCOLIG likeDs(KCOLIG_t);
+    Dcl-S KCOLIGExiste Ind;
+
+//Initialisation des valeurs constantes 
+//de la table des mouvements de stocks en attente de traitement
+    InitialisationVRESTK();
+
+//Ecriture de la table des entêtes des livraisons
+    EcritureKCOENT();
+
+    For i = 1 to NombreTotalLignesSF;
+        Chain i GESTIONSFL;
+
+        Select;
+            when £Mode = CREATION;
+                If (EcranLigneQuantiteLivree > 0 or EcranLigneQuantiteRetournee > 0);
+
+                // CREATION - KCOCUM
+                //Récupération des anciennes valeurs de KCOCUM
+                // et vérification si le couple client/Code article existe déjà dans KCOCUM
+                    Exec SQL
+                    Select 
+                        QuantiteLivree, 
+                        QuantiteRetournee, 
+                        QuantiteCumulEcart, 
+                        QuantiteTheoriqueStock
+                    Into
+                        :OLD_KCOCUM.QuantiteLivree, 
+                        :OLD_KCOCUM.QuantiteRetournee, 
+                        :OLD_KCOCUM.QuantiteCumulEcart, 
+                        :OLD_KCOCUM.QuantiteTheoriqueStock
+                    From KCOCUM
+                    Where CodeClient = :ECRANCODECLIENT
+                        And CodeArticle = :EcranLigneCodeArticle;
+                    If SQLCode = 0;
+                        KCOCUMExiste = *On;
+                    ElseIf SQLCode = 100;
+                        KCOCUMExiste = *Off;
+                    Else;
+                        GestionErreurSQL();
+                    EndIf; 
+
+                    NEW_KCOCUM.CodeClient = EcranCodeClient;
+                    NEW_KCOCUM.CodeArticle = EcranLigneCodeArticle; 
+                    NEW_KCOCUM.HorodatageSaisie = %timestamp();
+                    NEW_KCOCUM.ProfilUser = psds.User;
+
+                    If KCOCUMExiste = *Off;//La ligne n existe pas : Création
+                        NEW_KCOCUM.QuantiteLivree = EcranLigneQuantiteLivree; 
+                        NEW_KCOCUM.QuantiteRetournee = EcranLigneQuantiteRetournee; 
+                        NEW_KCOCUM.QuantiteCumulEcart = 0;
+                        NEW_KCOCUM.QuantiteTheoriqueStock = 
+                            EcranLigneQuantiteLivree - EcranLigneQuantiteRetournee;
+                        EcritureKCOCUM(NEW_KCOCUM:KCOCUMExiste);
+
+                    Else;//Le couple existe : Mise à jour
+                        NEW_KCOCUM.QuantiteLivree = 
+                                OLD_KCOCUM.QuantiteLivree + EcranLigneQuantiteLivree;
+                        NEW_KCOCUM.QuantiteRetournee = 
+                                OLD_KCOCUM.QuantiteRetournee + EcranLigneQuantiteRetournee;
+                        NEW_KCOCUM.QuantiteCumulEcart = OLD_KCOCUM.QuantiteCumulEcart;
+                        NEW_KCOCUM.QuantiteTheoriqueStock = 
+                                OLD_KCOCUM.QuantiteTheoriqueStock 
+                                + (NEW_KCOCUM.QuantiteLivree - NEW_KCOCUM.QuantiteRetournee);
+                        EcritureKCOCUM(NEW_KCOCUM:KCOCUMExiste);
+
+                    EndIf;
+
+                // CREATION - VRESTK
+                    If EcranLigneQuantiteLivree > 0;
+                        EcritureVRESTK(
+                                EcranLigneCodeArticle 
+                                :EcranLigneQuantiteLivree 
+                                :SORTIE_STOCK);
+                    EndIf;
+                    If EcranLigneQuantiteRetournee > 0 ;
+                        EcritureVRESTK(
+                                EcranLigneCodeArticle 
+                                :EcranLigneQuantiteRetournee 
+                                :ENTREE_STOCK);
+                    EndIf;
+
+                // CREATION - KCOLIG
+                    NEW_KCOLIG.NumeroLivraison = EcranNumeroLivraison; 
+                    NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
+                    NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
+                    NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
+                    KCOLIGExiste = *Off;
+                    EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
+                EndIf;
+
+
+            when £Mode = MODIFICATION;
+             //Récupération des anciennes valeurs saisies
+                Exec SQL
+                    select quantiteLivree,
+                        quantiteRetournee
+                    Into 
+                        :OLD_KCOLIG.QuantiteLivree,
+                        :OLD_KCOLIG.QuantiteRetournee
+                    From KCOLIG
+                    Where NumeroLivraison = :EcranNumeroLivraison 
+                    And CodeArticle = :EcranLigneCodeArticle;
+                If SQLCode = 100;//Aucune donnée trouvée
+                    OLD_KCOLIG.QuantiteLivree = 0;
+                    OLD_KCOLIG.QuantiteRetournee = 0;
+                    KCOLIGExiste = *Off;
+                Else;
+                    KCOLIGExiste = *On;
+                    GestionErreurSQL();
+                EndIf;
+                
+            // Si les quantités ont changé
+                If OLD_KCOLIG.QuantiteLivree <> EcranLigneQuantiteLivree
+                OR OLD_KCOLIG.QuantiteRetournee <> EcranLigneQuantiteRetournee;
+                // MODIFICATION - KCOCUM
+                //Récupération des anciennes valeurs de KCOCUM
+                // et vérification si le couple client/Code article existe déjà dans KCOCUM
+                    Exec SQL
+                        Select 
+                            QuantiteLivree, 
+                            QuantiteRetournee, 
+                            QuantiteCumulEcart, 
+                            QuantiteTheoriqueStock
+                        Into
+                            :OLD_KCOCUM.QuantiteLivree, 
+                            :OLD_KCOCUM.QuantiteRetournee, 
+                            :OLD_KCOCUM.QuantiteCumulEcart, 
+                            :OLD_KCOCUM.QuantiteTheoriqueStock
+                        From KCOCUM
+                        Where CodeClient = :ECRANCODECLIENT
+                            And CodeArticle = :EcranLigneCodeArticle;
+                    If SQLCode = 0;
+                        KCOCUMExiste = *On;
+                    ElseIf SQLCode = 100;
+                        KCOCUMExiste = *Off;
+                    Else;
+                        GestionErreurSQL();
+                    EndIf; 
+
+                    NEW_KCOCUM.CodeClient = EcranCodeClient;
+                    NEW_KCOCUM.CodeArticle = EcranLigneCodeArticle; 
+                    NEW_KCOCUM.HorodatageSaisie = %timestamp();
+                    NEW_KCOCUM.ProfilUser = psds.User;
+
+                    If KCOCUMExiste = *Off;//La ligne n existe pas : Création
+                        NEW_KCOCUM.QuantiteLivree = EcranLigneQuantiteLivree; 
+                        NEW_KCOCUM.QuantiteRetournee = EcranLigneQuantiteRetournee; 
+                        NEW_KCOCUM.QuantiteCumulEcart = 0;
+                        NEW_KCOCUM.QuantiteTheoriqueStock = 
+                        EcranLigneQuantiteLivree - EcranLigneQuantiteRetournee;
+
+                        EcritureKCOCUM(NEW_KCOCUM:KCOCUMExiste);
+
+                    Else;//Le couple existe : Mise à jour
+                        NEW_KCOCUM.QuantiteLivree = 
+                            OLD_KCOCUM.QuantiteLivree - OLD_KCOLIG.QuantiteLivree 
+                            + EcranLigneQuantiteLivree;
+                        NEW_KCOCUM.QuantiteRetournee = 
+                            OLD_KCOCUM.QuantiteRetournee - OLD_KCOLIG.QuantiteRetournee
+                            + EcranLigneQuantiteRetournee;
+                        NEW_KCOCUM.QuantiteCumulEcart = OLD_KCOCUM.QuantiteCumulEcart;
+                        NEW_KCOCUM.QuantiteTheoriqueStock = 
+                            OLD_KCOCUM.QuantiteTheoriqueStock 
+                            + NEW_KCOCUM.QuantiteLivree - OLD_KCOLIG.QuantiteLivree
+                           - NEW_KCOCUM.QuantiteRetournee - OLD_KCOLIG.QuantiteRetournee
+                           + OLD_KCOCUM.QuantiteCumulEcart;
+
+                        EcritureKCOCUM(NEW_KCOCUM:KCOCUMExiste);
+
+                    EndIf;
+
+                // MODIFICATION - VRESTK
+                    If (OLD_KCOLIG.QuantiteLivree <> EcranLigneQuantiteLivree);
+                        QuantiteVRESTK = OLD_KCOLIG.QuantiteLivree * -1;
+                        EcritureVRESTK(EcranLigneCodeArticle : QuantiteVRESTK  : SORTIE_STOCK);
+                        If EcranLigneQuantiteLivree > 0;
+                            EcritureVRESTK(EcranLigneCodeArticle 
+                        : EcranLigneQuantiteLivree 
+                        : SORTIE_STOCK);
+                        EndIf;
+                    EndIf;
+                    If (OLD_KCOLIG.QuantiteRetournee <> EcranLigneQuantiteRetournee);
+                        QuantiteVRESTK= OLD_KCOLIG.QuantiteRetournee * -1;
+                        EcritureVRESTK(EcranLigneCodeArticle : QuantiteVRESTK  : ENTREE_STOCK);
+                        If EcranLigneQuantiteRetournee > 0 ;
+                            EcritureVRESTK(EcranLigneCodeArticle 
+                        : EcranLigneQuantiteRetournee 
+                        : ENTREE_STOCK);
+                        EndIf;
+                    EndIf;
+
+                // MODIFICATION - KCOLIG
+                    NEW_KCOLIG.NumeroLivraison = EcranNumeroLivraison; 
+                    NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
+                    NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
+                    NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
+
+                    EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
+
+                EndIf;
+            
+            OTHER;
+        EndSl;
+    EndFor;
+
+    IntegrationVRESTK();
+End-Proc;
+
+/// ------------------------------------------------------------------------------------
+// EditionPRTF
+// Edite le PRTFKPBP11 et met à jour le nombre d éditions
+/// ------------------------------------------------------------------------------------
+Dcl-Proc EditionPRTF;
+
+    Dcl-Pi EditionPRTF ;
+    End-Pi;
+
+    Dcl-S lignePagePRTF         Packed(3:0);
+    Dcl-S NouveauNumeroEdition  Packed(2:0);    
+    Dcl-S prtf_txt_entete char(30);
+    Dcl-S i	Packed(4:0);
+    Dcl-S ZDSCXX Char(6);
+
+    K£PIMP.p_CodeEdition = PRTF_CODE_EDITION;
+    K£PIMP.p_CodeModule = PRTF_CODE_MODULE;
+    K£PIMP.p_User       = psds.User;
+
+    // Appel K£PIMP pour récupérer les paramètres d impression (TABVV XIMPRE)
+    KPIMP(
+        K£PIMP.p_CodeEdition
+        :K£PIMP.p_CodeModule 
+        :K£PIMP.p_User       
+        :K£PIMP.r_outq       
+        :K£PIMP.r_nbexj      
+        :K£PIMP.r_nbexs      
+        :K£PIMP.r_nbexm      
+        :K£PIMP.r_suspe      
+        :K£PIMP.r_conserver);
+
+    // Construction texte d en-tête
+    prtf_txt_entete = 'Bon consignes ' + %char(£NumeroLivraison);
+
+    //Execution de l OVRPRTF
+    CommandeCL = 'OVRPRTF FILE(' + %trimr(PRTF_CODE_EDITION) + 
+                    ') OUTQ(' + %trimr(K£PIMP.r_outq) + 
+                    ') PRTTXT(' + QUOTE + %trimr(prtf_txt_entete) + QUOTE +
+                    ') COPIES(' + %trimr(ParametresConsigne.NombreExemplairesBL) + 
+                    ') HOLD(' + %trimr(K£PIMP.r_suspe) + 
+                    ') SAVE(' + %trimr(K£PIMP.r_conserver) + 
+                    ') USRDTA(' + %trimr(psds.User) + ')';
+    //FIXME: Le nombre d exemplaire je peux pas juste le prendre de KPIMP ?
+    Monitor;
+        ExecCL(CommandeCL);
+    On-Error;
+        dsply 'Erreur commande OVRPRTF';
+    EndMon;
+
+    //Récupération du numéro d édition
+    Exec SQL
+    select NUMEROEDITION + 1
+    Into :NouveauNumeroEdition
+    From KCOENT
+    Where NUMEROLIVRAISON = :£NumeroLivraison;
+    GestionErreurSQL();
+
+    //Gestion de l édition du document    
+    Ind_FinDePagePRTF = *OFF;
+    lignePagePRTF=20;
+
+    //Ecriture de l entête
+    PRTF_NumeroPage = 1;
+    PRTF_ProfilUtilisateur = psds.user;
+    PRTF_Programme = psds.Proc;
+    PRTF_Date = %Date();
+    PRTF_Heure = %Time();
+    PRTF_NumeroEdition = NouveauNumeroEdition;
+    PRTF_DateLivraison = ECRANDATELIVRAISON;
+    Write ENTETE;
+
+    Write Ligne;
+
+    //Ecriture entête société
+    ZDSCXX='ZDSC01';
+    PRTF_ZDSC01 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC02';
+    PRTF_ZDSC02 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC03';
+    PRTF_ZDSC03 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC04';
+    PRTF_ZDSC04 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC05';
+    PRTF_ZDSC05 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC06';
+    PRTF_ZDSC06 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC07';
+    PRTF_ZDSC07 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC08';
+    PRTF_ZDSC08 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC09';
+    PRTF_ZDSC09 = GetEnteteSociete(ZDSCXX);
+    ZDSCXX='ZDSC10';
+    PRTF_ZDSC10 = GetEnteteSociete(ZDSCXX);
+    Write ENTSOC;
+
+    Write Ligne;
+
+    //Ecriture entête client
+    //Initialisation des zones de l entête du PRTF
+    PRTF_ClientCode = ECRANCODECLIENT;
+    PRTF_ClientCodeGroupe = ECRANCODECLIENT;
+    
+    //Récupération & affectation des données client
+    VMRICL.UCOSTE = Societe.Code;
+    VMRICL.UCOCLI = ECRANCODECLIENT;
+    PR_VMRICL(VMRICL.UCOSTE
+                    :VMRICL.UCOCLI
+                    :VMRICL.ULISOC
+                    :VMRICL.ULIDES
+                    :VMRICL.ULIRUE
+                    :VMRICL.ULIVIL
+                    :VMRICL.UCOPOS
+                    :VMRICL.ULIBDI
+                    :VMRICL.UCOPAY
+                    :VMRICL.UCOLAN
+                    :VMRICL.UCOARC
+                    :VMRICL.UCORE1
+                    :VMRICL.UCORE2
+                    :VMRICL.UTXCO1
+                    :VMRICL.UTXCO2
+                    :VMRICL.URACDE
+                    :VMRICL.UCOLCP
+                    :VMRICL.UCOLIV
+                    :VMRICL.UCOTRA
+                    :VMRICL.UCOBLI
+                    :VMRICL.UFGECL
+                    :VMRICL.UCOFAC
+                    :VMRICL.UTXESC
+                    :VMRICL.UCOPAG
+                    :VMRICL.UCODEV
+                    :VMRICL.UCOECH
+                    :VMRICL.UCOMRG
+                    :VMRICL.UCOTAX
+                    :VMRICL.UTYFAC
+                    :VMRICL.UMTMFA
+                    :VMRICL.UMTMFP
+                    :VMRICL.UCOCTX
+                    :VMRICL.UMTCAU
+                    :VMRICL.UMTCOF
+                    :VMRICL.UCOCEC
+                    :VMRICL.UMTSTA
+                    :VMRICL.UMTENC
+                    :VMRICL.UMTCHT
+                    :VMRICL.UCOCTR
+                    :VMRICL.UCOTAR
+                    :VMRICL.UCOCOV
+                    :VMRICL.UTXREM
+                    :VMRICL.UNUCOL
+                    :VMRICL.UCORET
+                    :VMRICL.ULIEXP
+                    :VMRICL.UCOEDV);
+    PRTF_ClientLibelleSociete = VMRICL.ULISOC;
+    PRTF_ClientDesignation = VMRICL.ULIDES;
+    PRTF_ClientRue = VMRICL.ULIRUE;
+    PRTF_ClientVille = VMRICL.ULIVIL;
+    PRTF_ClientCodePostal = VMRICL.UCOPOS;
+    PRTF_CLIENTBUREAUDISTRIB = VMRICL.ULIBDI;
+    Write ENTECLI;
+
+    Write Ligne;
+
+
+    For i = 1 to NombreTotalLignesSF;
+        Chain i GESTIONSFL;
+        PRTF_ARTICLECODE = ECRANLIGNECODEARTICLE;
+        PRTF_ARTICLELIBELLE = ECRANLIGNELIBELLE1ARTICLE;
+        PRTF_ARTICLEQUANTITE = ECRANLIGNEQUANTITELIVREE;
+        PRTF_PRIXUNITAIREARTICLE = GetPrixUnitaireArticle(
+        Societe.Code
+        :EcranCodeClient
+        :ECRANDATELIVRAISON
+        :ECRANLIGNECODEARTICLE
+        :ECRANLIGNEQUANTITELIVREE
+        );
+        PRTF_PRIXTOTALLIGNE= PRTF_PRIXUNITAIREARTICLE * ECRANLIGNEQUANTITELIVREE;
+        PRTF_PRIXTOTALCLIENT = PRTF_PRIXTOTALCLIENT + PRTF_PRIXTOTALLIGNE;
+        If (lignePagePRTF > 60);
+            Write ENTETE;
+
+            Write Ligne;
+            Write ENTSOC;
+
+            Write Ligne;
+            Write ENTECLI;
+
+            Write Ligne;
+            lignePagePRTF = 20;
+        EndIf;
+    
+        Write LIGNEART;
+
+        lignePagePRTF += 3;
+
+    EndFor;
+    Write Ligne;
+    
+    Write TOTAL;
+
+    // Pour déclencher l impression physique :
+    Close KCOP11PM;
+    
+    //Mise à jour du numéro d édition : 
+    Exec SQL 
+        UPDATE KCOENT
+    SET 
+        NUMEROEDITION = :NouveauNumeroEdition
+    WHERE 
+        NUMEROLIVRAISON = :£NumeroLivraison;
+    GestionErreurSQL();
+
+    //Suppression des paramètres d impression
+    CommandeCL = 'DLTOVR FILE(' + %trimr(PRTF_CODE_EDITION) + ')';
+    Monitor;
+        ExecCL(CommandeCL);
+    On-Error;
+        dsply 'Erreur commande DLTOVR FILE';
+    EndMon;
+
+End-Proc;
+
+///
+// EcritureKCOENT
+// Ecriture dans le fichier des entêtes des livraisons de consignes
+// - Si c est une création de livraison : Création d une nouvelle ligne
+// - Si c est une modification de livraison : Mise à jour des logs de livraison
+// - Si c est une création de retour : Mise à jour du top Retour
+// - Si c est une modification d un retour : Mise à jour des logs du retour
+///
+Dcl-Proc EcritureKCOENT;
+
+    Select;
+        //Création de livraison : Ajout d une nouvelle ligne
+        When  £Operation = LIVRAISON And £Mode = CREATION;
+
+            Exec Sql
+            INSERT INTO KCOENT (
+                NUMEROLIVRAISON,     
+                NUMEROEDITION,       
+                LIVRAISONTIMESTAMP,  
+                LIVRAISONUTILISATEUR,
+                TOPRETOUR
+            ) VALUES (
+                :£NumeroLivraison,
+                0,
+                CURRENT TIMESTAMP,
+                :psds.User,
+                'N'
+            );
+            GestionErreurSQL();
+
+        //Modification d une livraison : Mise à jour des logs de livraison
+        When  £Operation = LIVRAISON And £Mode = MODIFICATION;
+            Exec SQL
+                UPDATE KCOENT
+                SET 
+                    LIVRAISONTIMESTAMP = CURRENT TIMESTAMP,
+                    LIVRAISONUTILISATEUR = :psds.User
+                WHERE 
+                    NUMEROLIVRAISON = :£NumeroLivraison;
+            GestionErreurSQL();
+
+        //Création d un retour : Mise à jour du Top Retour
+        When  £Operation = RETOUR And £Mode = CREATION;
+            Exec SQL
+                UPDATE KCOENT
+                SET 
+                    TOPRETOUR = 'O',
+                    RETOURTIMESTAMP = CURRENT TIMESTAMP,
+                    RETOURUTILISATEUR = :psds.User
+                WHERE 
+                    NUMEROLIVRAISON = :£NumeroLivraison;
+            GestionErreurSQL();
+
+        //Modification d un retour : Mise à jour des logs de retour
+        When  £Operation = RETOUR And £Mode = MODIFICATION;
+            Exec SQL
+                UPDATE KCOENT
+                SET 
+                    RETOURTIMESTAMP = CURRENT TIMESTAMP,
+                    RETOURUTILISATEUR = :psds.User
+                WHERE 
+                    NUMEROLIVRAISON = :£NumeroLivraison;
+            GestionErreurSQL();
+        Other;
+    EndSl;
+End-Proc;
+
+///
+// EcritureKCOCUM
+// Ecriture dans le fichier des cumuls de consignes par client
+// 
+// @param KCOCUM_New : Nouvelle valeur à écrire
+// @param KCOCUMExiste : La ligne existe t-elle déjà ? 
+//
+// Gère deux cas :
+// - Si la ligne n existe pas : Insertion d une nouvelle ligne
+// - Si la ligne existe : Mise à jour des quantités
+///
+Dcl-Proc EcritureKCOCUM;
+    Dcl-Pi *n;
+        KCOCUM_New LikeDS(KCOCUM_t);
+        KCOCUMExiste Ind;
+    End-Pi;
+
+    If Not KCOCUMExiste;
+        // Insertion d une nouvelle ligne
+        Exec SQL
+            INSERT INTO KCOCUM (
+                CodeClient,
+                CodeArticle,
+                QuantiteLivree,
+                QuantiteRetournee,
+                QuantiteCumulEcart,
+                QuantiteTheoriqueStock,
+                HorodatageSaisie,
+                ProfilUser
+            ) VALUES (
+                :KCOCUM_New.CodeClient,
+                :KCOCUM_New.CodeArticle,
+                :KCOCUM_New.QuantiteLivree,
+                :KCOCUM_New.QuantiteRetournee,
+                :KCOCUM_New.QuantiteCumulEcart,
+                :KCOCUM_New.QuantiteTheoriqueStock,
+                CURRENT TIMESTAMP,
+                :KCOCUM_New.ProfilUser
+            );
+
+    Else;
+        // Mise à jour des quantités pour une ligne existante 
+        Exec SQL
+            UPDATE KCOCUM
+            SET QuantiteLivree = :KCOCUM_New.QuantiteLivree,
+                QuantiteRetournee = :KCOCUM_New.QuantiteRetournee,
+                QuantiteTheoriqueStock = :KCOCUM_New.QuantiteTheoriqueStock,
+                HorodatageSaisie = CURRENT TIMESTAMP,
+                ProfilUser = :KCOCUM_New.ProfilUser
+            WHERE CodeClient = :KCOCUM_New.CodeClient
+            AND CodeArticle = :KCOCUM_New.CodeArticle;
+    EndIf;
+
+    GestionErreurSQL();
+
+End-Proc;
+
+///
+// EcritureKCOLIG
+// Ecriture dans le fichier des lignes des livraisons de consignes
+// 
+// @param KCOLIG_New : Nouvelle valeur à écrire
+// @param KCOLIGExiste : La ligne existe t-elle déjà ?
+//
+// Gère deux cas :
+// - Si la ligne n existe pas : Insertion d une nouvelle ligne
+// - Si la ligne existe : Mise à jour des quantités
+///
+Dcl-Proc EcritureKCOLIG;
+    Dcl-Pi *n;
+        KCOLIG_New LikeDS(KCOLIG_t);
+        KCOLIGExiste Ind;
+    End-Pi;
+
+    If Not KCOLIGExiste;
+        // Insertion d une nouvelle ligne
+        Exec SQL
+            INSERT INTO KCOLIG (
+                NumeroLivraison,
+                CodeArticle,
+                QuantiteLivree,
+                QuantiteRetournee
+            ) VALUES (
+                :KCOLIG_New.NumeroLivraison,
+                :KCOLIG_New.CodeArticle,
+                :KCOLIG_New.QuantiteLivree,
+                :KCOLIG_New.QuantiteRetournee
+            );
+            
+    Else;
+        // Mise à jour des quantités pour une ligne existante
+        Exec SQL
+            UPDATE KCOLIG
+            SET QuantiteLivree = :KCOLIG_New.QuantiteLivree,
+                QuantiteRetournee = :KCOLIG_New.QuantiteRetournee
+            WHERE NumeroLivraison = :KCOLIG_New.NumeroLivraison
+            AND CodeArticle = :KCOLIG_New.CodeArticle;
+    EndIf;
+
+    GestionErreurSQL();
+
+End-Proc;
+
+///
+//                                      Initialisation VRESTK
+//
+// - Initialisation des valeurs de la table VRESTK
+///
+
+Dcl-Proc InitialisationVRESTK;
+     //Initialisation VRESTK
+    VRESTKDS = '';
+
+    //Récupération du compteur de mouvements :
+    Exec SQL
+        Select DEC(XLIPAR)
+        Into :VRESTKDS.NumeroMouvement
+        FROM VPARAM
+        Where XCORAC = :TABLE_CHARTREUSE_MOUVEMENT_STOCK_NUM
+        And XCOARG = CONCAT(:ParametresConsigne.CodeDepotConsignes, :Societe.Code);
+    GestionErreurSQL();
+
+    VRESTKDS.CodeSociete = Societe.Code;
+    VRESTKDS.CodeDepot = ParametresConsigne.CodeDepotConsignes;
+    VRESTKDS.MouvementJour = %Uns(%SUBST(%char(ECRANDATELIVRAISON):1:2));
+    VRESTKDS.MouvementMois = %Uns(%SUBST(%char(ECRANDATELIVRAISON):4:2));
+    VRESTKDS.MouvementSiecle = %Uns(%SUBST(%char(ECRANDATELIVRAISON):7:2));
+    VRESTKDS.MouvementAnnee = %Uns(%SUBST(%char(ECRANDATELIVRAISON):9:2));
+     //     VRESTKDS.CodeArticle = ;
+     //     VRESTKDS.QuantiteMouvement = ;
+     //     VRESTKDS.CodeSection = ;
+     //     VRESTKDS.CodeProjet  = ;
+     //     VRESTKDS.CodeUniteDeGestion  = ;
+     //     VRESTKDS.PrixUnitaireMouvement = ;
+     //     VRESTKDS.CodeEdition = ;
+    VRESTKDS.PumpAnterieur = 0;
+    VRESTKDS.QuantiteAcheteeDelaisAppro = 0;
+    VRESTKDS.QuantiteModifiantEncours = 0;
+    VRESTKDS.PrixAchat_Fabrication = 0;
+     //     VRESTKDS.CodeGenerationCompta = ;
+     //     VRESTKDS.LibelleMouvement = ;
+    VRESTKDS.RefMouvementNumBLNumRecep =  'C-'+ ECRANCODECLIENT;
+    //     VRESTKDS.Emplacement = ;
+    //     VRESTKDS.Lot = ;
+    //     VRESTKDS.ElementDeLot  = ;
+    VRESTKDS.CodeProfil = psds.User;
+    VRESTKDS.CreationJour = %Uns(%SUBST(%Char(%DATE()):9:2));
+    VRESTKDS.CreationMois = %Uns(%SUBST(%Char(%DATE()):6:2));
+    VRESTKDS.CreationAnnee = %Uns(%SUBST(%Char(%DATE()):3:2));
+    VRESTKDS.CreationSiecle = %Uns(%SUBST(%Char(%DATE()):1:2));
+    VRESTKDS.NomProgramme = psds.Proc;
+    VRESTKDS.ModifHeure = %Uns(%SUBST(%Char(%TIME()):1:2));
+    VRESTKDS.ModifMinute = %Uns(%SUBST(%Char(%TIME()):4:2));
+    VRESTKDS.ModifSeconde = %Uns(%SUBST(%Char(%TIME()):7:2));
+    VRESTKDS.VALS = 'S';
+    //     VRESTKDS.CodeEtablissement = ;
+    VRESTKDS.NumeroDePoste = 0;
+    //     VRESTKDS.TopReaj = ;
+    VRESTKDS.ClientOuFournisseur = *BLANKS;
+    //     VRESTKDS.DesignationMouvement = ;
+    //     VRESTKDS.DepotTransf  = ;
+    VRESTKDS.QuantiteLogistique = 0;
+    //     VRESTKDS.VariableLogistique  = ;
+    //     VRESTKDS.VariablePromo = ;
+    //     VRESTKDS.FlagTop1 = ;
+    //     VRESTKDS.FlagTop2 = ;
+    //     VRESTKDS.SpecifAlpha25 = ;
+End-Proc;
+
+///
+// EcritureVRESTK
+// Ecriture dans le fichier des lignes des livraisons de consignes
+// et appel du programme VSLMVT2 pour acceptation des mouvements de stocks en attente
+///
+Dcl-Proc EcritureVRESTK;
+    Dcl-Pi *n;
+        p_CodeArticle Char(20);
+        p_Quantite packed(4:0);
+        p_TypeMouvement Char(1);  // E: Entrée, S: Sortie
+    End-Pi;
+
+     //Attribution des valeurs
+    VRESTKDS.CodeArticle = p_CodeArticle;
+    VRESTKDS.QuantiteMouvement = p_Quantite;
+    If p_TypeMouvement = ENTREE_STOCK;
+        VRESTKDS.CodeMouvement = ParametresConsigne.CodeMouvementEntree;
+    elseIf p_TypeMouvement = SORTIE_STOCK;
+        VRESTKDS.CodeMouvement = ParametresConsigne.CodeMouvementSortie;
+    EndIf;
+
+
+    //Récupération du code unité de gestion
+    exec sql 
+        select ACOUNG
+        into :VRESTKDS.CODEUNITEDEGESTION
+        FROM VARTIC
+        Where ACOART = :ECRANLIGNECODEARTICLE;
+    GestionErreurSQL();
+
+    //Calcul du prix
+    VRESTKDS.PrixUnitaireMouvement = GetPrixUnitaireArticle(
+        Societe.Code
+        :EcranCodeClient
+        :ECRANDATELIVRAISON
+        :p_CodeArticle
+        :p_Quantite
+    ) * p_Quantite;
+
+     //Ecriture dans VRESTK
+    Exec Sql
+         Insert Into VRESTK
+              Values (:VRESTKDS.CODESOCIETE,
+                      :VRESTKDS.CODEDEPOT,
+                      :VRESTKDS.NUMEROMOUVEMENT,
+                      :VRESTKDS.MOUVEMENTJOUR,
+                      :VRESTKDS.MOUVEMENTMOIS,
+                      :VRESTKDS.MOUVEMENTSIECLE,
+                      :VRESTKDS.MOUVEMENTANNEE,
+                      :VRESTKDS.CODEMOUVEMENT,
+                      :VRESTKDS.CODEARTICLE,
+                      :VRESTKDS.QUANTITEMOUVEMENT,
+                      :VRESTKDS.CODESECTION,
+                      :VRESTKDS.CODEPROJET,
+                      :VRESTKDS.CODEUNITEDEGESTION,
+                      :VRESTKDS.PRIXUNITAIREMOUVEMENT,
+                      :VRESTKDS.CODEEDITION,
+                      :VRESTKDS.PUMPANTERIEUR,
+                      :VRESTKDS.QUANTITEACHETEEDELAISAPPRO,
+                      :VRESTKDS.QUANTITEMODIFIANTENCOURS,
+                      :VRESTKDS.PRIXACHAT_FABRICATION,
+                      :VRESTKDS.CODEGENERATIONCOMPTA,
+                      :VRESTKDS.LIBELLEMOUVEMENT,
+                      :VRESTKDS.REFMOUVEMENTNUMBLNUMRECEP,
+                      :VRESTKDS.EMPLACEMENT,
+                      :VRESTKDS.LOT,
+                      :VRESTKDS.ELEMENTDELOT,
+                      :VRESTKDS.CODEPROFIL,
+                      :VRESTKDS.CREATIONJOUR,
+                      :VRESTKDS.CREATIONMOIS,
+                      :VRESTKDS.CREATIONANNEE,
+                      :VRESTKDS.CREATIONSIECLE,
+                      :VRESTKDS.NOMPROGRAMME,
+                      :VRESTKDS.MODIFHEURE,
+                      :VRESTKDS.MODIFMINUTE,
+                      :VRESTKDS.MODIFSECONDE,
+                      :VRESTKDS.VALS,
+                      :VRESTKDS.CODEETABLISSEMENT,
+                      :VRESTKDS.NUMERODEPOSTE,
+                      :VRESTKDS.TOPREAJ,
+                      :VRESTKDS.CLIENTOUFOURNISSEUR,
+                      :VRESTKDS.DESIGNATIONMOUVEMENT,
+                      :VRESTKDS.DEPOTTRANSF,
+                      :VRESTKDS.QUANTITELOGISTIQUE,
+                      :VRESTKDS.VARIABLELOGISTIQUE,
+                      :VRESTKDS.VARIABLEPROMO,
+                      :VRESTKDS.FLAGTOP1,
+                      :VRESTKDS.FLAGTOP2,
+                      :VRESTKDS.SPECIFALPHA25);
+    GestionErreurSQL() ;
+
+    VRESTKDS.NumeroMouvement = VRESTKDS.NumeroMouvement + 1;
+
+End-Proc;
 
 // ----------------------------------------------------------------------------
 //
 //                                 SERVICES
-//                  Réutilisable dans d'autres programmes
+//                  Réutilisable dans d autres programmes
 //
 // -----------------------------------------------------------------------------
 
@@ -558,7 +1684,7 @@ End-Proc;
 // La procédure renvoie le libellé de la société en fonction de son code
 // TABVV : STE
 //
-// @return Libellé de la société si erreur renvoi *ALL'?'
+// @return Libellé de la société si erreur renvoi *ALL ? 
 ///
 
 Dcl-Proc GetLibelleSociete ;
@@ -571,7 +1697,7 @@ Dcl-Proc GetLibelleSociete ;
 
 
     Exec SQL
-            Select SUBSTR(XLIPAR, 1, 26)
+            Select SUBSTR(XLIPAR, 1, 20)
                 Into :LibelleSocieteReturn
                 FROM VPARAM
                 WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE;
@@ -590,7 +1716,7 @@ End-Proc;
 // La procédure renvoie le Code de la société
 // TABVV : STE
 //
-// @return Code de la société si erreur renvoi *ALL'?'
+// @return Code de la société si erreur renvoi *ALL ?
 ///
 Dcl-Proc GetCodeSociete ;
     Dcl-Pi *n Char(2);
@@ -620,7 +1746,7 @@ End-Proc;
 // en fonction du code Société
 //
 // TABVV : STE
-// @return Bilbiotheque de fichier de la société si erreur renvoi *ALL'?'
+// @return Bilbiotheque de fichier de la société si erreur renvoi *ALL ?
 ///
 Dcl-Proc GetBibliothequeFichierSociete ;
     Dcl-Pi *n Char(10);
@@ -646,7 +1772,7 @@ End-Proc;
 
 ///
 // Gestion des erreurs SQL
-// Affiche à l'écran s'il y a une erreur SQL
+// Affiche à l écran s il y a une erreur SQL
 ///
 
 Dcl-Proc GestionErreurSQL ;
@@ -684,7 +1810,7 @@ End-Proc;
 
 ///
 // Appel de la fenêtre utilisateur
-// - Appel de la fenêtre utilisateur (par 'F2')
+// - Appel de la fenêtre utilisateur (par  F2 )
 ///
 
 Dcl-Proc AffichageFenetreUtilisateur ;
@@ -700,288 +1826,239 @@ End-Proc;
 
 ///
 // Appel du menu de services
-// - Appel du menu de services (par 'F6')
+// - Appel du menu de services (par F6 )
 ///
 
 Dcl-Proc AffichageFenetreServices ;
     PR_GOASER();
 End-Proc;
 
-///
-// Ecran FIN Validation
-// Affichage de l'écran de validation avec ses 5 Options
-// Gère les différentes options possibles pour une fin de travail du programme
-//  '0' : touche F12 utilisée
-//  '1' : mise à jour et retour écran de garde
-//  '2' : pas de mise à jour et retour écran de garde
-//  '3' : mise à jour et fin de programme
-//  '4' : fin de programme sans mise à jour
-//  '5' : reprise
-//
-// @return Ind *On si fin de programme, *Off si pas de fin
-///
-Dcl-Proc AffichageEcranValidation;
-    Dcl-Pi *n ind;
 
+///
+// GetEnteteSociete()
+
+// Récupération des entêtes de sociétés
+// TABVV ZDSXX
+// pi : Code racine
+// Return Char(45) Libellé entête société
+///
+Dcl-Proc GetEnteteSociete;
+
+    Dcl-Pi GetEnteteSociete Char(45) ;
+        p_Xcorac Char(6);
     End-Pi;
 
-    Dcl-S FinProgramme Ind;
+    Dcl-S LibelleEnteteReturn Char(45);
 
-    Select;
-        When £Mode = CREATION ;
-            EcranFinChoix1 = '*';
-            EcranFinChoix2 = '2';
-            EcranFinChoix3 = '3';
-            EcranFinChoix4 = '4';
-            EcranFinChoixAction =  3;
-        When £Mode = MODIFICATION;
-            EcranFinChoix1 = '1';
-            EcranFinChoix2 = '2';
-            EcranFinChoix3 = '3';
-            EcranFinChoix4 = '4';
-            EcranFinChoixAction =  3;
-        When £Mode = VISUALISATION;
-            EcranFinChoix1 = '*';
-            EcranFinChoix2 = '2';
-            EcranFinChoix3 = '*';
-            EcranFinChoix4 = '4';
-            EcranFinChoixAction =  5;
-        other;
-            EcranFinChoix1 = '*';
-            EcranFinChoix2 = '2';
-            EcranFinChoix3 = '*';
-            EcranFinChoix4 = '4';
-            EcranFinChoixAction =  5;
-    EndSl;
+    Exec SQL
+        SELECT SUBSTR(Xlipar, 1, 45)
+        INTO :LibelleEnteteReturn
+        FROM VPARAM
+        WHERE Xcorac = :p_Xcorac ;
+    If SQLCODE <> 0;
+        GestionErreurSQL();
+        LibelleEnteteReturn = *BLANKS;
+    EndIf;
 
-    // Suite du programme en fonction du choix de l'utilisateur
-    //              code retour  '0' : F12
-    //                           '1' : mise à jour et retour écran gar
-    //                           '2' : pas de mise à jour et retour éc
-    //                           '3' : mise à jour et fin de programme
-    //                           '4' : fin de programme sans mise à j.
-    //                           '5' : reprise
-    EXFMT FMFIN;
-    Select;
-        When fichierDS.TouchePresse = F12 Or EcranFinChoixAction = 5;
+    Return LibelleEnteteReturn;
+End-Proc;
 
-        When EcranFinChoixAction = 1 AND EcranFinChoix1 <> '*';
-            EcritureTables();
 
-        When EcranFinChoixAction = 2 AND EcranFinChoix2 <> '*';
+///
+// ExecCL
+// Execute une commande CL
+//
+// @param Commande
+///
 
-        When EcranFinChoixAction = 3 AND EcranFinChoix3 <> '*';
-            EcritureTables();
-            FinProgramme = *On;
+Dcl-Proc ExecCL Export;
+    Dcl-Pi *N;
+        CommandeCL        VarChar(200);
+    End-Pi;
 
-        When EcranFinChoixAction = 4 AND EcranFinChoix4 <> '*';
-            FinProgramme = *On;
-
-        Other;
-
-    EndSl;
-
-    Return FinProgramme;
-
+    QCMDEXC(CommandeCL : %Len(CommandeCL));
 End-Proc;
 
 
 // ------------------------------------------------------------------------------------
-// EcritureTables()
-//
-// Ecris dans les tables suivantes :
-// Fichier des entêtes des livraisons de consignes : KCOENT
-// Fichier des lignes des livraisons de consignes : KCOLIG
-// Fichier des cumuls de consignes par client : KCOCUM
+// GetPrixUnitaireArticle
+// Permet d effectuer une recherche du prix unitaire en appelant le programme 
 // ------------------------------------------------------------------------------------
-dcl-proc EcritureTables;
+Dcl-Proc GetPrixUnitaireArticle;
+    Dcl-Pi GetPrixUnitaireArticle packed(13:4);  // Retourne le prix unitaire
+        p_CodeSociete Char(2) const;
+        p_CodeClient Char(9) const;
+        p_DatePrix Date const;
+        p_CodeArticle Char(20) const;
+        p_Quantite Packed(11:3) const;
+    End-Pi;
 
-    Dcl-S i Zoned(4:0);
-    Dcl-S KCOLIGExiste Ind;
-    Dcl-S KCOCUMExiste Ind;
-    Dcl-S QuantiteLivree            Packed(4:0);
-    Dcl-S QuantiteRetournee         Packed(4:0);
-    Dcl-S QuantiteCumulEcart        Packed(4:0);
-    Dcl-S QuantiteTheoriqueStock    Packed(4:0);
+    // Initialisation de la data structure avec les valeurs par défaut
+    VMRPUT = *ALLx'00';
 
-    //Gestion de la table KCOENT
-    If (£Mode = CREATION And £Operation = LIVRAISON);
-        //Insert KCOENT
-        Exec Sql
-        INSERT INTO KCOENT (
-            NUMEROLIVRAISON,     
-            NUMEROEDITION,       
-            LIVRAISONTIMESTAMP,  
-            LIVRAISONUTILISATEUR,
-            TOPRETOUR
-        ) VALUES (
-            :£NumeroLivraison,
-            0,
-            CURRENT TIMESTAMP,
-            psds.User,
-            'N'
-        );
-        GestionErreurSQL();
-
-    Else;//UPDATE KCOENT
-        // - Update KCOENT LIVRAISON
-        If (£Operation = LIVRAISON);
-        Exec SQL
-        UPDATE KCOENT
-        SET 
-            LIVRAISONTIMESTAMP = CURRENT TIMESTAMP,
-            LIVRAISONUTILISATEUR = :psds.User
-        WHERE 
-            NUMEROLIVRAISON = :£NumeroLivraison;
-        GestionErreurSQL();
-
-        ElseIf (£Operation = RETOUR);
-        //Update KCOENT RETOUR
-        Exec SQL
-        UPDATE KCOENT
-        SET 
-            TOPRETOUR = 'O',
-            RETOURTIMESTAMP = CURRENT TIMESTAMP,
-            RETOURUTILISATEUR = :psds.User
-        WHERE 
-            NUMEROLIVRAISON = :£NumeroLivraison;
-        GestionErreurSQL();
-        EndIf;
-
+    //Récupération des tarifs par défaut
+    exec SQL
+        select TCOTA1, TCOTA2
+        Into :VMRPUT.UCOTA1, :VMRPUT.UCOTA2
+        FROM VTARDF
+        Where TCOSTE = :Societe.Code;
+    GestionErreurSQL();
+    
+  // Récupération des informations client depuis VCLIEC
+    Exec SQL
+       SELECT CCOCTR,    -- Code centrale
+              CCODEV,    -- Devise de commande
+              CCOTAR,    -- Code tarif
+              CNUCOL,    -- N° colonne tarif
+              CTXREM    -- Taux de remise
+       INTO :VMRPUT.UCOCTR,
+            :VMRPUT.UCODEV,
+            :VMRPUT.UCOTAR,
+            :VMRPUT.UNUCOL,
+            :VMRPUT.UTXREC
+       FROM VCLIEC
+       WHERE CCOSTE = :p_CodeSociete
+       AND CCOCLI = :p_CodeClient;
+    GestionErreurSQL();
+    If VMRPUT.UCOTAR = *BLANKS;
+        VMRPUT.UCOTAR=VMRPUT.UCOTA1;
     EndIf;
 
+    // Conversion de la date au format JJMMAA
+    VMRPUT.UDACDE =  %dec(p_DatePrix : *DMY);
 
-    For i = 1 to NombreTotalLignesSF;
-        Chain i GESTIONSFL;
+   // Paramètres obligatoires
+    VMRPUT.UCOSTE = p_CodeSociete;      // Code société
+    VMRPUT.UCOCLI = p_CodeClient;       // Code client
+    VMRPUT.UCOART = p_CodeArticle;      // Code article
+    VMRPUT.UQTCDE = p_Quantite; // Quantité FIXME: Mettre la vraie quantité après
+    
+    
 
-            // Verification si la ligne n'existe pas dans KCOLIG
-            //Pour l'article et la livraison
-            // Si n'existe pas => Insert
-            // Si existe => Update
-            Exec SQL
-                Select count(NumeroLivraison)
-                Into :Compteur
-                From KCOLIG
-                Where NumeroLivraison = :£NumeroLivraison
-                And CodeArticle = :EcranLigneCodeArticle;
-                GestionErreurSQL();
-                If compteur = 0;
-                    KCOLIGExiste=*Off;
-                Else;
-                    KCOLIGExiste=*On;
-                EndIf;
+    //Récupération du code regroupement de l article
+    exec SQL
+        select ACOREG
+        Into :VMRPUT.UCOREG
+        From VARTIC
+        Where ACOART = :p_CodeArticle and ACOSTE = :Societe.Code;
+    GestionErreurSQL(); 
 
-                //La ligne n'existe pas : Insert
-                If KCOLIGExiste = *Off 
-                And (EcranLigneQuantiteLivree <> 0 OR EcranLigneQuantiteRetournee <> 0);
-                Exec SQL
-                    INSERT INTO KCOLIG (
-                    NumeroLivraison,
-                    CodeArticle, 
-                    QuantiteLivree,
-                    QuantiteRetournee
-                ) VALUES (
-                    :£NumeroLivraison,
-                    :EcranLigneCodeArticle,
-                    :EcranLigneQuantiteLivree,      
-                    :EcranLigneQuantiteRetournee        
-                );
-                GestionErreurSQL();
-                Else;
-                //La ligne existe : Update
-                Exec SQL
-                    UPDATE KCOLIG
-                    SET 
-                        QuantiteLivree = :EcranLigneQuantiteLivree,
-                        QuantiteRetournee = :EcranLigneQuantiteRetournee
-                    WHERE 
-                        NUMEROLIVRAISON = :£NumeroLivraison
-                        And CodeArticle = :EcranLigneCodeArticle;
-                    GestionErreurSQL();
-                EndIf;
+    VMRPUT.UCOMON = VMRPUT.UCODEV;      // Devise société = devise commande
+    VMRPUT.UFGGEN = '0';                // Top GENCOD
 
-            // Vérification si la ligne existe pas dans KCOCUM
-            // Pour le client
-            // SI SQL = 100 => Insert
-            // Si SQL = 0 => Update
-            Exec SQL
-                Select 
-                QuantiteLivree, 
-                QuantiteRetournee, 
-                QuantiteCumulEcart, 
-                QuantiteTheoriqueStock
-                Into
-                :QuantiteLivree, 
-                :QuantiteRetournee, 
-                :QuantiteCumulEcart, 
-                :QuantiteTheoriqueStock
-                From KCOCUM
-                Where CodeClient = :ECRANCODECLIENT
-                And CodeArticle = :EcranLigneCodeArticle;
-                If SQLCode = 0;
-                KCOCUMExiste = *On;
-                ElseIf SQLCode = 100;
-                KCOCUMExiste = *Off;
-                Else;
-                KCOCUMExiste = *Off;
-                GestionErreurSQL();
-                EndIf;
-            
-            //La ligne n'existe pas : Insert
-            If KCOCUMExiste = *Off;
-            QuantiteTheoriqueStock = EcranLigneQuantiteLivree - EcranLigneQuantiteRetournee;
-            Exec SQL
-            INSERT INTO KCOCUM (
-                CodeClient,
-                CodeArticle,
-                QuantiteLivree,
-                QuantiteRetournee,
-                QuantiteCumulEcart,
-                QuantiteTheoriqueStock,
-                HorodatageSaisie,
-                TypeOperation,
-                ProfilUser
-            ) VALUES (
-                :ECRANCODECLIENT,
-                :ECRANLIGNECODEARTICLE,
-                :ECRANLIGNEQUANTITELIVREE,
-                :EcranLigneQuantiteRetournee,
-                0,
-                :QuantiteTheoriqueStock,
-                CURRENT TIMESTAMP,
-                :£Operation,
-                :psds.User
-            );
-            GestionErreurSQL();
-            Else;
-
-             QuantiteLivree = QuantiteLivree + EcranLigneQuantiteLivree;
-             QuantiteRetournee = QuantiteRetournee  + EcranLigneQuantiteRetournee;
-             QuantiteTheoriqueStock = 
-             QuantiteLivree - QuantiteRetournee + QuantiteCumulEcart;
-            Exec SQL
-                Update KCOCUM
-                SET
-                    QuantiteLivree = :QuantiteLivree,
-                    QuantiteRetournee = :QuantiteRetournee,
-                    QuantiteTheoriqueStock = :QuantiteTheoriqueStock
-                Where CodeClient = :EcranCodeClient
-                And CodeArticle = :EcranLigneCodeArticle;
-                GestionErreurSQL();
-
-            EndIf;
-    EndFor;
-
-    // Gestion de l'édition du bon de mise à disposition des consignes
-    If (£Operation = LIVRAISON);
-        //TODO:Edition du bon de mise à disposition
-
-        //Mise à jour du nombre d'édition
-        Exec SQL 
-            UPDATE KCOENT
-        SET 
-            NUMEROEDITION = NUMEROEDITION + 1
-        WHERE 
-            NUMEROLIVRAISON = :£NumeroLivraison;
+    Exec SQL
+        select substr(XLIPAR, 2, 1)
+        Into :VMRPUT.UFGREM
+        FROM FIDVALSAM.VPARAM
+        Where xcorac= :TABVV_FLAG_REMISE_CLIENT;
+    If SQLCode = 100;
+        VMRPUT.UFGREM = '0';
+    ElseIf SQLCode <> 0;
+        GestionErreurSQL();
     EndIf;
-end-proc;
+
+    // Paramètres complémentaires initialisés à vide
+    VMRPUT.UCOVLO = *BLANKS;            // Variante logistique
+    VMRPUT.UCOVPR = *BLANKS;            // Variante promo
+
+    VMRPUT.UPUVEN = 0;                  // P.U. trouvé (sortie)
+    VMRPUT.UPUVAR = 0;                  // P.U. article (sortie)
+    VMRPUT.UTXREL = 0;                  // Remise trouvée (sortie)
+
+    // Appel du programme de recherche de prix
+    PR_VMRPUT(VMRPUT.UCOSTE
+             :VMRPUT.UCOTAR
+             :VMRPUT.UCOTA1
+             :VMRPUT.UCOTA2
+             :VMRPUT.UCOCLI
+             :VMRPUT.UCOART
+             :VMRPUT.UCOCTR
+             :VMRPUT.UCOREG
+             :VMRPUT.UCOVLO
+             :VMRPUT.UCOVPR
+             :VMRPUT.UDACDE
+             :VMRPUT.UQTCDE
+             :VMRPUT.UCODEV
+             :VMRPUT.UCOMON
+             :VMRPUT.UFGGEN
+             :VMRPUT.UFGREM
+             :VMRPUT.UTXREC
+             :VMRPUT.UNUCOL
+             :VMRPUT.UPUVEN
+             :VMRPUT.UPUVAR
+             :VMRPUT.UTXREL);
+    Return VMRPUT.UPUVEN;
+End-Proc;
+
+
+///
+// IntegrationVRESTK
+// Integration des mouvements de stock en attente dans la table VRESTK
+// - Gestion des paramètres d impression
+// - Acceptation des mouvements de stock en attente présents dans VRESTK
+// - Mise à jour du compteur de mouvements
+///
+Dcl-Proc IntegrationVRESTK;
+    Dcl-Pi *n ;
+
+    End-Pi;
+
+    // Variables pour K£PIMP 
+    K£PIMP.p_CodeEdition = 'VSLMVTP';
+    K£PIMP.p_CodeModule = 'CO';
+    K£PIMP.p_User = psds.User;
+
+ // Appel de K£PIMP pour les paramètres d impression
+    KPIMP(K£PIMP.p_CodeEdition 
+          :K£PIMP.p_CodeModule
+          :K£PIMP.p_User       
+          :K£PIMP.r_outq       
+          :K£PIMP.r_nbexj      
+          :K£PIMP.r_nbexs      
+          :K£PIMP.r_nbexm      
+          :K£PIMP.r_suspe      
+          :K£PIMP.r_conserver);
+
+    // Paramétrage du PRTF
+    monitor;
+        CommandeCL = 'OVRPRTF FILE(VSLMVTP) ' +
+               'OUTQ(' + %trim(K£PIMP.r_outq) + ') ' +
+               'COPIES(' + %trim(K£PIMP.r_nbexj) + ') ' +
+               'HOLD(' + %trim(K£PIMP.r_suspe) + ') ' + 
+               'SAVE(' + %trim(K£PIMP.r_conserver) + ')';
+        ExecCL(CommandeCL);
+    on-error;
+        dsply 'Erreur commande OVRPRTF';
+    endmon;
+
+ // Appel de VSLMVT2 pour l acceptation des mouvements
+    VSLMVT2.CodeSociete = Societe.Code;
+    VSLMVT2.Limit = ParametresConsigne.CodeDepotConsignes + EcranCodeClient;
+    VSLMVT2.CodeEcran = psds.JobName;
+    VSLMVT2.CodeProfil = '**********';
+    
+    PR_VSLMVT2(
+        VSLMVT2.CodeSociete
+        :VSLMVT2.Limit  
+        :VSLMVT2.CodeEcran
+        :VSLMVT2.CodeProfil
+    );
+
+    // Suppression des paramètres d impression
+    monitor;
+        CommandeCL = 'DLTOVR FILE(VSLMVTP)';
+        ExecCL(CommandeCL);
+    on-error;
+        dsply 'Erreur commande DLTOVR';
+    endmon;
+
+    //Mise à jour du compteur de mouvements :
+    Exec SQL
+        Update VPARAM
+        Set XLIPAR = :VRESTKDS.NumeroMouvement
+        Where XCORAC = :TABLE_CHARTREUSE_MOUVEMENT_STOCK_NUM
+        And XCOARG = CONCAT(:ParametresConsigne.CodeDepotConsignes, :Societe.Code);
+    GestionErreurSQL();
+
+
+End-Proc;

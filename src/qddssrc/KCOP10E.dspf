@@ -33,7 +33,7 @@
      A            ELNUFAC        8Y 0   8 14ALIAS(ECRANLIGNENUMEROFACTURE)
      A            ELCOTO         3      8 23ALIAS(ECRANLIGNECODETOURNEE)
      A            ELCOCL         9      8 27ALIAS(ECRANLIGNECODECLIENT)
-     A            ELDALI          L  B  8 68ALIAS(ECRANLIGNEDATELIVRAISON)
+     A            ELDALI          L  O  8 68ALIAS(ECRANLIGNEDATELIVRAISON)
      A                                      DATFMT(*JOB)
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
@@ -132,7 +132,12 @@
      A                                      CA12(12)
      A                                  2 22'Création Livraison'
      A                                  4  2'Numéro Livraison :'
-     A            ECRLIV         8Y 0B  4 22ALIAS(ECRANCREATIONLIVRAISON)
-     A                                      TEXT('ECRANCREATIONLIVRAISON')
-     A                                  7 47'F12 = Annuler'
+     A            ECRLIV         8Y 0B  4 22ALIAS(WINDOWCREATIONLIVRAISON)
+     A                                      TEXT('WINDOWCREATIONLIVRAISON')
+     A                                      EDTCDE(Z)
+     A                                  6 47'F12 = Annuler'
      A                                      COLOR(BLU)
+     A            EWMSGERR      30      6  3ALIAS(WINDOWMESSAGEERREUR)
+     A                                      COLOR(RED)
+     A                                      DSPATR(RI)
+     A  84                                  DSPATR(ND)

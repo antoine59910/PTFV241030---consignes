@@ -28,7 +28,6 @@ Create or Replace Table FIDVALSAC.KCOCUM
    QuantiteCumulEcart     For Column QTCUME Decimal(4, 0)   Not Null,
    QuantiteTheoriqueStock For Column QTHSTK Decimal(4, 0)   Not Null,
    HorodatageSaisie       For Column HORSAI Timestamp       Not Null,
-   TypeOperation          For Column TYPOPE Char(20)         Not Null,
    ProfilUser             For Column PROFUS Char(10)        Not Null
 ) ;
 
@@ -48,7 +47,6 @@ Label On FIDVALSAC.KCOCUM
    QuantiteCumulEcart     Is 'Quantite            Cumul Ecart',
    QuantiteTheoriqueStock Is 'Quantite            Stock Theorique',
    HorodatageSaisie       Is 'Horodatage          Saisie',
-   TypeOperation          Is 'Type                Operation',
    ProfilUser             Is 'Profil              Utilisateur'
 );
 
@@ -61,6 +59,5 @@ Label On FIDVALSAC.KCOCUM
    QuantiteCumulEcart     Text Is 'Quantite Cumul Ecart',
    QuantiteTheoriqueStock Text Is 'Quantite Stock Theorique',
    HorodatageSaisie       Text Is 'Horodatage Saisie',
-   TypeOperation          Text Is 'Type Operation',
    ProfilUser             Text Is 'Profil Utilisateur'
 );

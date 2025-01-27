@@ -33,10 +33,13 @@
      A                                      TEXT('ECRANLIGNELIBELLE1ARTICLE')
      A            ELQLIV         4Y 0B  7 61ALIAS(ECRANLIGNEQUANTITELIVREE)
      A                                      TEXT('ECRANLIGNEQUANTITELIVREE')
+     A                                      EDTCDE(Z)  
      A  42                                  DSPATR(PR)
+     A  43                                  DSPATR(RI)
      A            ELQRET         4Y 0B  7 70ALIAS(ECRANLIGNEQUANTITERETOURNEE)
      A  40                                  DSPATR(ND)
      A  41                                  DSPATR(PR)
+     A                                      EDTCDE(Z)  
      A                                      TEXT('ECRANLIGNEQUANTITERETOURNEE')
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
@@ -46,6 +49,8 @@
      A                                      SFLPAG(13)
      A                                      SFLSIZ(100)
      A                                      OVERLAY
+     A  30                                  SFLMSG('Quantité supérieure à la qu-
+     A                                      antité disponible')
      A                                      CF02(01 'Utilisateur')
      A                                      CF06(06 'Services')
      A                                      CA12(12 'Abandon')
@@ -79,39 +84,39 @@
      A            ECDCLI         9   O  3  4
      A                                      ALIAS(ECRANCODECLIENT)
      A                                      TEXT('ECRANCODECLIENT')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A            ECLRSO        30   O  3 15
      A                                      ALIAS(ECRANRAISONSOCIALECLIENT)
      A                                      TEXT('ECRANRAISONSOCIALECLIENT')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A            ECLCOM        30   O  3 46ALIAS(ECRANNOMCOMMERCIALCLIENT)
      A                                      TEXT('ECRANNOMCOMMERCIALCLIENT')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A            ENUMLI         8Y 0O  4 10
      A                                      ALIAS(ECRANNUMEROLIVRAISON)
      A                                      TEXT('ECRANNUMEROLIVRAISON')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A            ENUMFA         8Y 0O  4 28
      A                                      ALIAS(ECRANNUMEROFACTURE)
      A                                      TEXT('ECRANNUMEROFACTURE')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A            ENUTOU         2   O  4 42
      A                                      ALIAS(ECRANNUMEROTOURNEE)
      A                                      TEXT('ECRANNUMEROTOURNEE')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A                                  4 45'Date LIV:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A            EDALIV          L  O  4 55ALIAS(ECRANDATELIVRAISON)
      A                                      TEXT('ECRANDATELIVRAISON')
      A                                      DATFMT(*JOB)
-     A                                      COLOR(WHT)
-     A                                  4 66'N° Edition:'
+     A                                      COLOR(BLU)
+     A                                  4 66'Nb Edition:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A            ENUEDI         2Y 0   4 78ALIAS(ECRANNUMEROEDITION)
      A                                      TEXT('ECRANNUMEROEDITION')
-     A                                      COLOR(WHT)
+     A                                      COLOR(BLU)
      A                                  6 61'QTE LIV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)

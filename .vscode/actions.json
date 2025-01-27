@@ -57,10 +57,21 @@
   {
     "command": "CRTDSPF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) TEXT('DSPF from local')",
     "environment": "ile",
+    "deployFirst": true,
     "type": "file",
     "name": "Create Display File (CRTDSPF)",
     "extensions": [
       "dspf"
+    ]
+  },
+  {
+    "command": "CRTPRTF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) TEXT('DSPF from local')",
+    "environment": "ile",
+    "deployFirst": true,
+    "type": "file",
+    "name": "Create PRTF File (CRTPRTF)",
+    "extensions": [
+      "prtf"
     ]
   },
   {
