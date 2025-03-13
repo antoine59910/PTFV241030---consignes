@@ -23,9 +23,9 @@ Create Table FIDVALSAC.KCOENT
    NombreEdition          For Column  NNBEDI Decimal(2, 0)   Not Null,
    LivraisonTimeStamp     For Column  LIVDAT Timestamp       Not Null,
    LivraisonUtilisateur   For Column  LIVUSR Char(10)        Not Null,
-   TopRetour              For Column  TOPRET Char(1)         Not Null,
-   RetourTimeStamp        For Column  RETDAT Timestamp       Not Null,
-   RetourUtilisateur      For Column  RETUSR Char(10)        Not Null
+   TopRetour              For Column  TOPRET Char(1)                 ,
+   RetourTimeStamp        For Column  RETDAT Timestamp               ,
+   RetourUtilisateur      For Column  RETUSR Char(10)        
 ) ;
 
 

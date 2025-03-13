@@ -1,0 +1,13 @@
+delete
+from FIDVALSAC.KCOENT
+;
+
+delete
+from FIDVALSAC.KCOLIG;
+
+delete
+from FIDVALSAC.KCOCUM
+;
+delete
+from FIDVALSAC.VRESTK;
+155134

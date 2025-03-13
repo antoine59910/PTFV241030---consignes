@@ -5,7 +5,8 @@
     "deployFirst": true,
     "environment": "ile",
     "extensions": [
-      "RPGLE"
+      "RPGLE",
+      "RPG"
     ]
   },
   {

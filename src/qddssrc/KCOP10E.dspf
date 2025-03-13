@@ -28,12 +28,19 @@
      A                                      ALIAS(ECRANVERBEOBJET)
      A          R GESTIONSFL                SFL
      A            ELOPTAC        1   B  8  3ALIAS(ECRANLIGNEACTION)
+     A  70                                  COLOR(BLU)
      A            ELNULIV        8Y 0O  8  5ALIAS(ECRANLIGNENUMEROLIVRAISON)
+     A  70                                  COLOR(BLU)
      A            ELDECL        30   O  8 37ALIAS(ECRANLIGNEDESIGNATIONCLIENT)
+     A  70                                  COLOR(BLU)
      A            ELNUFAC        8Y 0   8 14ALIAS(ECRANLIGNENUMEROFACTURE)
+     A  70                                  COLOR(BLU)
      A            ELCOTO         3      8 23ALIAS(ECRANLIGNECODETOURNEE)
+     A  70                                  COLOR(BLU)
      A            ELCOCL         9      8 27ALIAS(ECRANLIGNECODECLIENT)
+     A  70                                  COLOR(BLU)
      A            ELDALI          L  O  8 68ALIAS(ECRANLIGNEDATELIVRAISON)
+     A  70                                  COLOR(BLU)
      A                                      DATFMT(*JOB)
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
@@ -58,7 +65,7 @@
      A                                  1 73DATE
      A                                      EDTCDE(Y)
      A                                  2 73TIME
-     A                                  6  5'N° LIV'
+     A                                  6  5'N° LIV  '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  6  3'O'
@@ -67,36 +74,28 @@
      A                                  6 23'TOU'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 27'CDE CLI'
+     A                                  6 27'CDE CLI  '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  3 25'F9=Nouvelle livraison'
-     A                                      COLOR(WHT)
-     A                                  6 37'Désignation client'
+     A                                  6 37'Désignation client            '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  4  4'Retour livraison :'
-     A                                      COLOR(WHT)
-     A                                  3 62'2=Visualiser'
-     A                                      COLOR(WHT)
-     A                                  6 14'N° FAC'
+     A                                  6 14'N° FAC  '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  6 68'Date LIV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  3 48'1=Modifier'
-     A                                      COLOR(WHT)
-     A                                  4 62'5=Visualiser'
-     A                                      COLOR(WHT)
-     A            ENULIF         8   B  7  5COLOR(BLU)
+     A            ENULIF         8Y 0B  7  5COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROLIVRAISONFILTRE)
      A                                      TEXT('Filtre sur le numéro de livra-
      A                                      ison')
-     A            ENUFAF         8   B  7 14COLOR(BLU)
+     A                                      EDTCDE(Z)
+     A            ENUFAF         8Y 0B  7 14COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROFACTUREFILTRE)
      A                                      TEXT('Filtre sur le numéro de factu-
      A                                      re')
+     A                                      EDTCDE(Z)
      A            ENUTOF         3   B  7 23COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROTOURNEEFILTRE)
      A                                      TEXT('Filtre sur le numéro de tourn-
@@ -122,11 +121,13 @@
      A                                      ALIAS(ECRANLIVRAISSANSRETOURFILTRE)
      A                                      TEXT('Filtre sur les livraisons san-
      A                                      s retour')
-     A                                  3  4'Livraison        :'
+     A                                  3  2'F9=Nouvelle livraison'
      A                                      COLOR(WHT)
-     A                                  4 25'3=Nouveau retour'
+     A                                  3 27'L=Gérer livraison'
      A                                      COLOR(WHT)
-     A                                  4 48'4=Modifier'
+     A                                  3 48'R=Gérer retour'
+     A                                      COLOR(WHT)
+     A                                  3 65'V=Visualiser'
      A                                      COLOR(WHT)
      A          R ECREAT                    WINDOW(6 10 7 62)
      A                                      CA12(12)

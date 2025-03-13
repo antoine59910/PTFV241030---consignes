@@ -459,54 +459,54 @@ End-Ds;
 /IF Defined(PR_VMRPUT)
     //Prototype :
     // Recherche tarifaire
-    dcl-pr PR_VMRPUT     ExtPgm('VMRPUT') ;
-        UCOSTE   char(02) ;               // - code société
-        UCOTAR   char(03) ;               // - tarif ligne
-        UCOTA1   char(03) ;               // - tarif par défaut n° 1
-        UCOTA2   char(03) ;               // - tarif par défaut n° 2
-        UCOCLI   char(09) ;               // - code client
-        UCOART   char(20) ;               // - code article
-        UCOCTR   char(06) ;               // - code centrale
-        UCOREG   char(06) ;               // - code regroupement
-        UCOVLO   char(02) ;               // - variante logistique
-        UCOVPR   char(02) ;               // - variante promo
-        UDACDE   packed(06:0) ;           // - date de commande JMA
-        UQTCDE   packed(11:3) ;           // - quantité commande
-        UCODEV   char(03) ;               // - devise de commande
-        UCOMON   char(03) ;               // - devise société
-        UFGGEN   char(01) ;               // - top GENCOD
-        UFGREM   char(01) ;               // - top AFFIREM
-        UTXREC   packed(05:2) ;           // - remise client
-        UNUCOL   packed(02:0) ;           // - n° colonne tarif client
-        UPUVEN   packed(13:4) ;           // - P.U. trouvé
-        UPUVAR   packed(13:4) ;           // - P.U.  article
-        UTXREL   packed(05:2) ;           // - remise trouvée
-    end-pr;
+Dcl-Pr PR_VMRPUT     ExtPgm('VMRPUT') ;
+    UCOSTE   char(02) ;               // - code société
+    UCOTAR   char(03) ;               // - tarif ligne
+    UCOTA1   char(03) ;               // - tarif par défaut n° 1
+    UCOTA2   char(03) ;               // - tarif par défaut n° 2
+    UCOCLI   char(09) ;               // - code client
+    UCOART   char(20) ;               // - code article
+    UCOCTR   char(06) ;               // - code centrale
+    UCOREG   char(06) ;               // - code regroupement
+    UCOVLO   char(02) ;               // - variante logistique
+    UCOVPR   char(02) ;               // - variante promo
+    UDACDE   packed(06:0) ;           // - date de commande JMA
+    UQTCDE   packed(11:3) ;           // - quantité commande
+    UCODEV   char(03) ;               // - devise de commande
+    UCOMON   char(03) ;               // - devise société
+    UFGGEN   char(01) ;               // - top GENCOD
+    UFGREM   char(01) ;               // - top AFFIREM
+    UTXREC   packed(05:2) ;           // - remise client
+    UNUCOL   packed(02:0) ;           // - n° colonne tarif client
+    UPUVEN   packed(13:4) ;           // - P.U. trouvé
+    UPUVAR   packed(13:4) ;           // - P.U.  article
+    UTXREL   packed(05:2) ;           // - remise trouvée
+End-Pr;
 
     //Data Structure :
-    Dcl-ds VMRPUT Qualified;
-        UCOSTE   char(02) ;               // - code société
-        UCOTAR   char(03) ;               // - tarif ligne
-        UCOTA1   char(03) ;               // - tarif par défaut n° 1
-        UCOTA2   char(03) ;               // - tarif par défaut n° 2
-        UCOCLI   char(09) ;               // - code client
-        UCOART   char(20) ;               // - code article
-        UCOCTR   char(06) ;               // - code centrale
-        UCOREG   char(06) ;               // - code regroupement
-        UCOVLO   char(02) ;               // - variante logistique
-        UCOVPR   char(02) ;               // - variante promo
-        UDACDE   packed(06:0) ;           // - date de commande JMA
-        UQTCDE   packed(11:3) ;           // - quantité commande
-        UCODEV   char(03) ;               // - devise de commande
-        UCOMON   char(03) ;               // - devise société
-        UFGGEN   char(01) ;               // - top GENCOD
-        UFGREM   char(01) ;               // - top AFFIREM
-        UTXREC   packed(05:2) ;           // - remise client
-        UNUCOL   packed(02:0) ;           // - n° colonne tarif client
-        UPUVEN   packed(13:4) ;           // - P.U. trouvé
-        UPUVAR   packed(13:4) ;           // - P.U.  article
-        UTXREL   packed(05:2) ;           // - remise trouvée
-    End-ds;
+Dcl-Ds VMRPUT Qualified;
+    UCOSTE   char(02) ;               // - code société
+    UCOTAR   char(03) ;               // - tarif ligne
+    UCOTA1   char(03) ;               // - tarif par défaut n° 1
+    UCOTA2   char(03) ;               // - tarif par défaut n° 2
+    UCOCLI   char(09) ;               // - code client
+    UCOART   char(20) ;               // - code article
+    UCOCTR   char(06) ;               // - code centrale
+    UCOREG   char(06) ;               // - code regroupement
+    UCOVLO   char(02) ;               // - variante logistique
+    UCOVPR   char(02) ;               // - variante promo
+    UDACDE   packed(06:0) ;           // - date de commande JMA
+    UQTCDE   packed(11:3) ;           // - quantité commande
+    UCODEV   char(03) ;               // - devise de commande
+    UCOMON   char(03) ;               // - devise société
+    UFGGEN   char(01) ;               // - top GENCOD
+    UFGREM   char(01) ;               // - top AFFIREM
+    UTXREC   packed(05:2) ;           // - remise client
+    UNUCOL   packed(02:0) ;           // - n° colonne tarif client
+    UPUVEN   packed(13:4) ;           // - P.U. trouvé
+    UPUVAR   packed(13:4) ;           // - P.U.  article
+    UTXREL   packed(05:2) ;           // - remise trouvée
+End-Ds;
 
     //Exemple d'appel
 

@@ -1,41 +1,15 @@
-select *
-from FIDVALSAC.VENTLV
-where EAADLV = 24
-order by emmdlv desc;
-select *
-from FIDVALSAC.KCOENT
-where numerolivraison = 75034725
-;
-select *
-from FIDVALSAC.KCOLIG
-where numerolivraison = 75034725;
-select *
-from FIDVALSAC.KCOCUM
-where codeclient = 'C006897'
-;
-select *
-from FIDVALSAC.VRESTK;
+select * from FIDVALSAC.VENTLV where EAADLV = 25 order by emmdlv desc;
 
-select *
-from FIDVALSAC.vparam
-where XCORAC = 'MOISCL';
+select * from FIDVALSAC.KCOENT;
+select * from FIDVALSAC.KCOLIG;
+select * from FIDVALSAC.KCOCUM;
+select * from FIDVALSAC.VRESTK;
+select * from FIDVALSAC.VMTSTK where MCODEP = 'CON' order by MNUMVT desc;
+select * from FIDVALSAC.VSTOCK where SCOART LIKE 'CON00%';
+select * from FIDVALSAC.KCOF10;
 
-
--- Fichier des blocages
-delete
-from FIDVALSAC.KCOF10;
-delete
-from FIDVALSAC.KCOENT
-where numerolivraison = 75034725;
-delete
-from FIDVALSAC.KCOLIG
-where numerolivraison = 75034725;
-delete
-from FIDVALSAC.KCOCUM
-where codeclient = 'C006897';
-
-
-select  SUBSTR(Xlipar, 1, 45)
-from FIDVALSAC.VPARAM
-where xcorac ='ZDSC01' ;
-
+delete from FIDVALSAC.KCOENT;
+delete from FIDVALSAC.KCOLIG;
+delete from FIDVALSAC.KCOCUM;
+delete from FIDVALSAC.VRESTK;
+delete from FIDVALSAC.KCOF10;

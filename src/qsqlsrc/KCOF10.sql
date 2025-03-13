@@ -21,7 +21,7 @@ Create Table FIDVALSAC.KCOF10
    CodeAction             For Column  CODEAC Char(1)   Not Null,
    LockFlag               For Column  LOCKFG Char(1)   Not Null
 ) ;
-
+  
 
 Label On Table FIDVALSAC.KCOF10 Is 'Consignes.: verrouillage des livraisons';
 

@@ -51,7 +51,6 @@
      A                                      CF06(06 'Services')
      A                                      CA12(12 'Abandon')
      A                                      CA03(03 'Fin')
-     A                                      CF09(09 'Création UT')
      A            ERDNB2         4S 0B  2  5SFLRCDNBR
      A                                      DSPATR(ND)
      A                                      DSPATR(PR)
@@ -84,7 +83,6 @@
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A          R FM1
-     A*%%TS  SD  20170410  155147  GPRJINF     REL-V7R1M0  5770-WDS
      A                                      RTNCSRLOC(&EFORMA &EZONCU)
      A                                      CSRLOC(ENOLIG ENOCOL)
      A                                      CF02(02)
@@ -101,10 +99,16 @@
      A            EFORMA        10A  H
      A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
      A            ELISTE        20A  O  4  2ALIAS(ECRANLIBELLESOCIETE)
+     A                                      TEXT('ECRANLIBELLESOCIETE')         
      A                                  4 72DATE
      A                                      EDTCDE(Y)
      A                                  5 72TIME
-     A                                 12 14'Date inventaire. . . :'
+     A                                 10 14'Société. . . . . . . :'
+     A            ECOSTE         2A  B 10 39
+     A  30                                  ERRMSG('Code société invalide')
+     A  74                                  DSPATR(PR)
+     A                                      ALIAS(ECRANCODESOCIETE)
+     A                                      TEXT('ECRANCODESOCIETE')            
      A                                  3  2'                                  -
      A                                                                         -
      A                                               '
@@ -113,47 +117,46 @@
      A                                      CHECK(ER)
      A N74                                  DSPATR(PR)
      A                                      ALIAS(ECRANCHOIXACTION)
-     A                                      TEXT('ECRANCHOIXACTION')
      A            ELIOP1        17A  O  1  6
      A  81                                  DSPATR(RI)
      A  81                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION1)
-     A                                      TEXT('ECRANACTION1')
+     A                                      TEXT('ECRANACTION1')                
      A            ELIOP2        17A  O  1 25
      A  82                                  DSPATR(RI)
      A  82                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION2)
-     A                                      TEXT('ECRANACTION2')
+     A                                      TEXT('ECRANACTION2')                
      A            ELIOP3        17A  O  1 44
      A  83                                  DSPATR(RI)
      A  83                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION3)
-     A                                      TEXT('ECRANACTION3')
+     A                                      TEXT('ECRANACTION3')                
      A            ELIOP4        17A  O  1 63
      A  84                                  DSPATR(RI)
      A  84                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION4)
-     A                                      TEXT('ECRANACTION4')
+     A                                      TEXT('ECRANACTION4')                
      A            ELIOP5        17A  O  2  6
      A  85                                  DSPATR(RI)
      A  85                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION5)
-     A                                      TEXT('ECRANACTION5')
+     A                                      TEXT('ECRANACTION5')                
      A            ELIOP6        17A  O  2 25
      A  86                                  DSPATR(RI)
      A  86                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION6)
-     A                                      TEXT('ECRANACTION6')
+     A                                      TEXT('ECRANACTION6')                
      A            ELIOP7        17A  O  2 44
      A  87                                  DSPATR(RI)
      A  87                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION7)
-     A                                      TEXT('ECRANACTION7')
+     A                                      TEXT('ECRANACTION7')                
      A            ELIOP8        17A  O  2 63
      A  88                                  DSPATR(RI)
      A  88                                  COLOR(PNK)
      A                                      ALIAS(ECRANACTION8)
-     A                                      TEXT('ECRANACTION8')
+     A                                      TEXT('ECRANACTION8')                
      A                                 23 14'F3=Fin'
      A                                      COLOR(BLU)
      A                                 23 21'F4=Recherche'
@@ -164,36 +167,37 @@
      A                                      COLOR(BLU)
      A            EVEOBJ        10A  O 24 70COLOR(PNK)
      A                                      ALIAS(ECRANVERBEOBJET)
-     A                                      TEXT('ECRANVERBEOBJET')
      A            ELIACT        30A  O  4 28DSPATR(HI)
      A                                      ALIAS(ECRANLIBELLEACTION)
-     A                                      TEXT('ECRANLIBELLEACTION')
-     A                                 14 14'Code client. . . . . :'
-     A            ECOCLI         9A  B 14 39
+     A                                      TEXT('ECRANLIBELLEACTION')          
+     A                                 12 14'Code client. . . . . :'
+     A            ECOCLI         9A  B 12 39
      A  74                                  DSPATR(PR)
      A  32                                  ERRMSG('Code client invalide')
      A  35                                  ERRMSG('Au moins un code doit être -
      A                                      renseigné')
      A                                      ALIAS(ECRANCODECLIENT)
-     A                                      TEXT('ECRANCODECLIENT')
+     A                                      TEXT('ECRANCODECLIENT')             
      A                                 23 69'F23=Critères'
      A                                      COLOR(BLU)
      A                                 23 34'F6=Services'
      A                                      COLOR(BLU)
      A                                 23  2'F2=Utilis.'
      A                                      COLOR(BLU)
-     A            ELICLI        30A  O 14 49ALIAS(ECRANLIBELLECLIENT)
-     A                                      TEXT('ECRANLIBELLECLIENT')
-     A            EDALIV          L  B 12 39DATFMT(*JOB)
-     A                                      ALIAS(ECRANDATELIVRAISON)
-     A                                      TEXT('ECRANDATELIVRAISON')
-     A  31                                  ERRMSG('Date de livraison non -
-     A                                      valide')
-     A*%%RS+<record-sequences>
-     A*%%RS+ <sequence name="gestion consignes">
-     A*%%RS+  <device type="display" width="80" height="24" />
-     A*%%RS+  <record-write record-format="GESTIONBAS" />
-     A*%%RS+  <record-write record-format="GESTIONCTL" />
-     A*%%RS+  <record-write record-format="GESTIONSFL" />
-     A*%%RS+ </sequence>
-     A*%%RS </record-sequences> 
+     A            ELICLI        30A  O 12 49ALIAS(ECRANLIBELLECLIENT)
+     A                                      TEXT('ECRANLIBELLECLIENT')          
+     A          R ECREAT                    WINDOW(6 10 7 62)
+     A                                      CA12(12)
+     A                                  1 23'Saisie d''inventaire'              
+     A                                  4  2'Date de l''inventaire :'           
+     A                                  6 47'F12 = Annuler'
+     A                                      COLOR(BLU)
+     A            EWMSGERR      30      6  3ALIAS(WINDOWMESSAGEERREUR)
+     A                                      COLOR(RED)
+     A                                      DSPATR(RI)
+     A  84                                  DSPATR(ND)
+     A            EDAINV          L  B  4 25DATFMT(*JOB)                        
+     A                                      ALIAS(ECRANDATEINVENTAIRE)          
+     A  31                                  ERRMSG('Date de livraison non valid-
+     A                                      e')                                 
+     A                                      TEXT('ECRANDATEINVENTAIRE')         

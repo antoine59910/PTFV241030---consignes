@@ -145,11 +145,13 @@ Dcl-C VISUALISATION 'VISUALISATION';
 Dcl-C QUOTE '''';
 Dcl-C ESPACE ' ';
 Dcl-C POURCENTAGE '%';
-Dcl-C CODE_ACTION_MODIFIER_LIVRAISON '1';
-Dcl-C CODE_ACTION_VISUALISER_LIVRAISON '2';
+Dcl-S CODE_ACTION_CREATION_LIVRAISON char(1) Inz('9');
+Dcl-C CODE_ACTION_MODIFIER_LIVRAISON 'L';
+Dcl-C CODE_ACTION_VISUALISER_LIVRAISON 'L';
 Dcl-C CODE_ACTION_CREER_RETOUR '3';
 Dcl-C CODE_ACTION_MODIFIER_RETOUR '4';
 Dcl-C CODE_ACTION_VISUALISER_RETOUR '5';
+
 
 // --- Tables -------------------------------------------------------
 // Tables des entêtes de livraisons
@@ -166,12 +168,12 @@ Dcl-Ds Indicateur qualified;
     SousFichierDisplayControl                       Ind Pos(52);
     SousFichierClear                                Ind Pos(53);
     SousFichierEnd                                  Ind Pos(54);
+    SousFichierCouleurBleu                          Ind Pos(70);
 
     // Indicateurs d affichage
     MasquerMessageErreur                        Ind Pos(82);
     MasquerMessageInfo                          Ind Pos(83);
     MasquerMessageErreurWindow                  Ind Pos(84);    
-
 End-Ds ;
 
 // --- Data-structure système ------------------------------------------
@@ -238,6 +240,8 @@ DoW not Fin;
                     When fichierDS.touchePresse = ENTREE;
                         If VerificationCreation(WindowCreationLivraison);
                             // Si vérification OK : Appel du programme de saisie KCOP11
+                            VerrouillageLivraison(WindowCreationLivraison
+                                                :CODE_ACTION_CREATION_LIVRAISON);
                             KCOP11(LIVRAISON:CREATION:WindowCreationLivraison);
                             FinCreation = *On;
                             DeverrouillageLivraison(WindowCreationLivraison);
@@ -252,6 +256,10 @@ DoW not Fin;
             Fin=*On;
 
         When  fichierDS.touchePresse = ENTREE;
+            // Réinitialisation des message d'erreur et info
+            Indicateur.MasquerMessageErreur = *On;
+            Indicateur.MasquerMessageInfo = *On;
+            Indicateur.MasquerMessageErreurWindow = *On;
             If Verification();
                 If KCOP11_p.NumeroLivraison <> 0;
                     KCOP11(KCOP11_p.Operation:KCOP11_p.Mode:KCOP11_p.NumeroLivraison);
@@ -368,8 +376,8 @@ Dcl-Proc InitialisationProgramme;
     
     // Initialisation des filtres
     ECRANLIVRAISSANSRETOURFILTRE = 'X';      // Filtre retours traités (activé par défaut)
-    ECRANNUMEROLIVRAISONFILTRE = *BLANKS;         // Filtre numéro livraison
-    ECRANNUMEROFACTUREFILTRE = *BLANKS;            // Filtre numéro facture  
+    ECRANNUMEROLIVRAISONFILTRE = 0;         // Filtre numéro livraison
+    ECRANNUMEROFACTUREFILTRE = 0;            // Filtre numéro facture  
     ECRANNUMEROTOURNEEFILTRE = *Blanks;      // Filtre tournée
     ECRANCODECLIENTFILTRE = *BLANKS;          // Filtre code client
     ECRANDESIGNATIONCLIENTFILTRE = *Blanks;  // Filtre désignation client
@@ -399,6 +407,9 @@ Dcl-Proc ChargerSousFichier;
     Dcl-S ClauseWhere char(2048);
     Dcl-S ClauseOrderBy char(2048);
 
+    // Variable pour stocker le statut de retour
+    Dcl-S RetourEffectue Char(1);
+
     // Nettoyage initial du sous-fichier
     Indicateur.SousFichierClear = *On;
     Write GESTIONCTL;
@@ -407,7 +418,7 @@ Dcl-Proc ChargerSousFichier;
     // Initialisation du rang
     fichierDS.rang_sfl = 0;
 
-    ClauseSelect = 'SELECT DISTINCT K.NUMEROLIVRAISON, ' +
+    ClauseSelect = 'SELECT DISTINCT K.NUMEROLIVRAISON, K.TOPRETOUR, ' +
                   'V.ENUFAC, V.ECOTRA, V.ECOCLL, C.CLISOC, ' +
                   'CASE ' +
                     'WHEN V.EJJDLV > 0 AND V.EMMDLV > 0 AND V.EAADLV > 0 ' +
@@ -456,6 +467,7 @@ Dcl-Proc ChargerSousFichier;
     // Premier FETCH
     exec sql FETCH FROM C1 INTO 
             :ECRANLIGNENUMEROLIVRAISON,
+            :RetourEffectue,
             :ECRANLIGNENUMEROFACTURE,
             :ECRANLIGNECODETOURNEE,
             :ECRANLIGNECODECLIENT,
@@ -464,7 +476,7 @@ Dcl-Proc ChargerSousFichier;
     GestionErreurSQL();
 
     If SQLCode = 100; //Aucun enregistrement n a été trouvé
-        ECRANMESSAGEERREUR = 'Aucune LIVRAISON trouvée';
+        ECRANMESSAGEERREUR = 'Aucune livraison trouvée';
         Indicateur.MasquerMessageErreur = *Off;
         
     ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
@@ -475,12 +487,20 @@ Dcl-Proc ChargerSousFichier;
             // Initialisation ligne action
             ECRANLIGNEACTION = ' ';
 
+            // Activation de l'indicateur pour changer la couleur si retour effectué
+            If RetourEffectue = 'O';
+                Indicateur.SousFichierCouleurBleu = *On; 
+            Else;
+                Indicateur.SousFichierCouleurBleu = *Off; 
+            EndIf;
+
             // Écriture dans le sous-fichier  
             Write GESTIONSFL;
 
             // Lecture suivante
             exec sql FETCH FROM C1 INTO 
                     :ECRANLIGNENUMEROLIVRAISON,
+                    :RetourEffectue,
                     :ECRANLIGNENUMEROFACTURE,
                     :ECRANLIGNECODETOURNEE,
                     :ECRANLIGNECODECLIENT,
@@ -541,20 +561,20 @@ Dcl-Proc CreationClauseWhere;
                       POURCENTAGE + %Trim(ECRANDESIGNATIONCLIENTFILTRE) + 
                       POURCENTAGE + QUOTE;
 
-    // Filtre numéro livraison (commence par)
-    If ECRANNUMEROLIVRAISONFILTRE <> *BLANKS;
+// Filtre numéro livraison (égalité exacte)
+    If ECRANNUMEROLIVRAISONFILTRE <> 0;
         ClauseWhere = %trimr(ClauseWhere) 
-                      +  ' AND DIGITS(K.NUMEROLIVRAISON) LIKE ' + QUOTE
-                      + %trim(ECRANNUMEROLIVRAISONFILTRE) + POURCENTAGE + QUOTE;
+                + ' AND K.NUMEROLIVRAISON = ' 
+                + %trim(%editc(ECRANNUMEROLIVRAISONFILTRE:'Z'));
     EndIf;
 
-    // Filtre numéro facture (commence par)
-    If ECRANNUMEROFACTUREFILTRE <> *BLANKS;
+// Filtre numéro facture (égalité exacte)
+    If ECRANNUMEROFACTUREFILTRE <> 0;
         ClauseWhere = %trimr(ClauseWhere)
-                     + ' AND DIGITS(V.ENUFAC) LIKE ' + QUOTE 
-                     + %trim(ECRANNUMEROFACTUREFILTRE) + POURCENTAGE + QUOTE;
+                + ' AND V.ENUFAC = ' 
+                + %trim(%editc(ECRANNUMEROFACTUREFILTRE:'Z'));
     EndIf;
-
+    
     // Filtre tournée
     If ECRANNUMEROTOURNEEFILTRE <> *Blanks;
         ClauseWhere = %trimr(ClauseWhere)
