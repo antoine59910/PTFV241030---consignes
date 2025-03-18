@@ -250,6 +250,7 @@ Dcl-Ds Indicateur qualified;
   // Indicateurs affichage (DSPATR)
     GESTIONBAS_MasquerMessageErreur           Ind Pos(82); 
     GESTIONBAS_MasquerMessageInfo             Ind Pos(83);
+
     GESTIONSFL_MasquerQuantiteRetournee       Ind Pos(40);
     GESTIONSFL_ProtegerQuantiteRetournee      Ind Pos(41);
     GESTIONSFL_ProtegerQuantiteLivree         Ind Pos(42);
@@ -271,9 +272,11 @@ End-Ds;
 // Paramètres
 Dcl-Pi *N;
     // entrées
+    £NumBLConsignes                         Packed(8:0);//Numéro du bon de livraison de consignes
     £Operation                              Char(30);
     £Mode                                   Char(30);
-    £NumeroLivraison                        Packed(8:0);
+    // Facultatif : Numéro de la livraison associée à la livraison/retour de consignes
+    £NumeroLivraison                        Packed(8:0) Options(*NoPass);
 
     // sorties
 End-Pi ;
@@ -423,6 +426,8 @@ EndDo;
 //    - Préparation sous fichier
 //    - Initialisation en tetes (client, livraison, facture, etc.)
 //    - RAZ des filtres articles
+//
+// 4. Récupération des informations du client
 ///
 Dcl-Proc InitialisationProgramme;
    //--- 1. Initialisation des variables globales ---
@@ -515,7 +520,7 @@ Dcl-Proc InitialisationProgramme;
     //Sinon, on récupère les informations également dans la table KCOENT
         exec SQL
     SELECT DISTINCT 
-            K.NUMEROLIVRAISON as numeroLivraison,
+            K.NumBLConsignes as NumBLConsignes,
             K.NombreEdition as numeroEdition,
             V.ENUFAC as numeroFacture, 
             V.ECOTRA as codeTournee, 
@@ -540,7 +545,7 @@ Dcl-Proc InitialisationProgramme;
                 )
                 ELSE NULL
             END AS dateLivraison
-    Into    :ECRANNUMEROLIVRAISON, 
+    Into    :ECRANNUMEROLIVRAISONCONSIGNES, 
             :ECRANNUMEROEDITION, 
             :ECRANNUMEROFACTURE, 
             :ECRANNUMEROTOURNEE,
@@ -555,20 +560,79 @@ Dcl-Proc InitialisationProgramme;
         GestionErreurSQL();
     EndIf;
 
-   //Gestion affichage/protection des quantités
-    If (£Mode = VISUALISATION);
-        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
-        Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*On;
-    Else;
-        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*Off;
-        Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*Off;
-    EndIf;
-    If (£Operation = LIVRAISON);
-        Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*On;
-        Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
-    Else;
-        Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*Off;
-    EndIf;
+
+    //Gestion des affichages/protections
+    Select;
+        when (£Mode = CREATION Or £Mode = MODIFICATION) And £Operation = LIVRAISON;
+            Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*Off;
+            Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
+            Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*On;
+
+        when (£Mode = CREATION Or £Mode = MODIFICATION) And £Operation = RETOUR;
+            Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*On;
+            Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*Off;
+            Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*Off;
+
+        when £Mode = VISUALISATION;
+            Indicateur.GESTIONSFL_ProtegerQuantiteLivree=*On;
+            Indicateur.GESTIONSFL_ProtegerQuantiteRetournee=*On;
+            Indicateur.GESTIONSFL_MasquerQuantiteRetournee=*Off;
+
+        other;
+        // handle other conditions
+    EndSl;
+    
+    //Récupération & affectation des données client
+    VMRICL.UCOSTE = Societe.Code;
+    VMRICL.UCOCLI = ECRANCODECLIENT;
+    PR_VMRICL(VMRICL.UCOSTE
+                    :VMRICL.UCOCLI
+                    :VMRICL.ULISOC
+                    :VMRICL.ULIDES
+                    :VMRICL.ULIRUE
+                    :VMRICL.ULIVIL
+                    :VMRICL.UCOPOS
+                    :VMRICL.ULIBDI
+                    :VMRICL.UCOPAY
+                    :VMRICL.UCOLAN
+                    :VMRICL.UCOARC
+                    :VMRICL.UCORE1
+                    :VMRICL.UCORE2
+                    :VMRICL.UTXCO1
+                    :VMRICL.UTXCO2
+                    :VMRICL.URACDE
+                    :VMRICL.UCOLCP
+                    :VMRICL.UCOLIV
+                    :VMRICL.UCOTRA
+                    :VMRICL.UCOBLI
+                    :VMRICL.UFGECL
+                    :VMRICL.UCOFAC
+                    :VMRICL.UTXESC
+                    :VMRICL.UCOPAG
+                    :VMRICL.UCODEV
+                    :VMRICL.UCOECH
+                    :VMRICL.UCOMRG
+                    :VMRICL.UCOTAX
+                    :VMRICL.UTYFAC
+                    :VMRICL.UMTMFA
+                    :VMRICL.UMTMFP
+                    :VMRICL.UCOCTX
+                    :VMRICL.UMTCAU
+                    :VMRICL.UMTCOF
+                    :VMRICL.UCOCEC
+                    :VMRICL.UMTSTA
+                    :VMRICL.UMTENC
+                    :VMRICL.UMTCHT
+                    :VMRICL.UCOCTR
+                    :VMRICL.UCOTAR
+                    :VMRICL.UCOCOV
+                    :VMRICL.UTXREM
+                    :VMRICL.UNUCOL
+                    :VMRICL.UCORET
+                    :VMRICL.ULIEXP
+                    :VMRICL.UCOEDV);
+    ECRANCLIENTADRESSE = VMRICL.ULIRUE;
+    ECRANCLIENTVILLE = VMRICL.ULIVIL;
 End-Proc;
 
 
@@ -906,7 +970,7 @@ Dcl-Proc EcritureTables;
     EcritureKCOENT();
 
     //INIT KCOLIG
-    NEW_KCOLIG.NumeroLivraison = EcranNumeroLivraison; 
+    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
 
     For i = 1 to NombreTotalLignesSF;
         Chain i GESTIONSFL;
@@ -956,7 +1020,7 @@ Dcl-Proc EcritureTables;
                         Into 
                             :OLD_KCOLIG.QuantiteLivree
                         From KCOLIG
-                        Where NumeroLivraison = :EcranNumeroLivraison 
+                        Where NumeroLivraison = :ECRANNUMEROLIVRAISONCONSIGNES 
                         And CodeArticle = :EcranLigneCodeArticle;
                     If SQLCode = 100;//Aucune donnée trouvée
                         OLD_KCOLIG.QuantiteLivree = 0;
@@ -1029,7 +1093,7 @@ Dcl-Proc EcritureTables;
                         :OLD_KCOLIG.QuantiteLivree,
                         :OLD_KCOLIG.QuantiteRetournee
                     From KCOLIG
-                    Where NumeroLivraison = :EcranNumeroLivraison 
+                    Where NumeroLivraison = :ECRANNUMEROLIVRAISONCONSIGNES 
                     And CodeArticle = :EcranLigneCodeArticle;
                 If SQLCode = 100;//Aucune donnée trouvée
                     OLD_KCOLIG.QuantiteLivree = 0;
@@ -1057,7 +1121,7 @@ Dcl-Proc EcritureTables;
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
                     // --- MODIFICATION LIVRAISON - KCOLIG
-                    NEW_KCOLIG.NumeroLivraison = EcranNumeroLivraison; 
+                    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
                     NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
                     NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
                     NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
@@ -1099,7 +1163,7 @@ Dcl-Proc EcritureTables;
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
                     // --- MODIFICATION RETOUR - KCOLIG
-                    NEW_KCOLIG.NumeroLivraison = EcranNumeroLivraison; 
+                    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
                     NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
                     NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
                     NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
@@ -1254,55 +1318,6 @@ Dcl-Proc EditionPRTF;
     PRTF_ClientCode = ECRANCODECLIENT;
     PRTF_ClientCodeGroupe = ECRANCODECLIENT;
     
-    //Récupération & affectation des données client
-    VMRICL.UCOSTE = Societe.Code;
-    VMRICL.UCOCLI = ECRANCODECLIENT;
-    PR_VMRICL(VMRICL.UCOSTE
-                    :VMRICL.UCOCLI
-                    :VMRICL.ULISOC
-                    :VMRICL.ULIDES
-                    :VMRICL.ULIRUE
-                    :VMRICL.ULIVIL
-                    :VMRICL.UCOPOS
-                    :VMRICL.ULIBDI
-                    :VMRICL.UCOPAY
-                    :VMRICL.UCOLAN
-                    :VMRICL.UCOARC
-                    :VMRICL.UCORE1
-                    :VMRICL.UCORE2
-                    :VMRICL.UTXCO1
-                    :VMRICL.UTXCO2
-                    :VMRICL.URACDE
-                    :VMRICL.UCOLCP
-                    :VMRICL.UCOLIV
-                    :VMRICL.UCOTRA
-                    :VMRICL.UCOBLI
-                    :VMRICL.UFGECL
-                    :VMRICL.UCOFAC
-                    :VMRICL.UTXESC
-                    :VMRICL.UCOPAG
-                    :VMRICL.UCODEV
-                    :VMRICL.UCOECH
-                    :VMRICL.UCOMRG
-                    :VMRICL.UCOTAX
-                    :VMRICL.UTYFAC
-                    :VMRICL.UMTMFA
-                    :VMRICL.UMTMFP
-                    :VMRICL.UCOCTX
-                    :VMRICL.UMTCAU
-                    :VMRICL.UMTCOF
-                    :VMRICL.UCOCEC
-                    :VMRICL.UMTSTA
-                    :VMRICL.UMTENC
-                    :VMRICL.UMTCHT
-                    :VMRICL.UCOCTR
-                    :VMRICL.UCOTAR
-                    :VMRICL.UCOCOV
-                    :VMRICL.UTXREM
-                    :VMRICL.UNUCOL
-                    :VMRICL.UCORET
-                    :VMRICL.ULIEXP
-                    :VMRICL.UCOEDV);
     PRTF_ClientLibelleSociete = VMRICL.ULISOC;
     PRTF_ClientDesignation = VMRICL.ULIDES;
     PRTF_ClientRue = VMRICL.ULIRUE;
@@ -1522,7 +1537,7 @@ Dcl-Proc InitialisationVRESTK;
     VRESTKDS.PrixAchat_Fabrication = 0;
      //     VRESTKDS.CodeGenerationCompta = ;
      //     VRESTKDS.LibelleMouvement = ;
-    VRESTKDS.RefMouvementNumBLNumRecep =  ECRANCODELIVRAISON;
+    VRESTKDS.RefMouvementNumBLNumRecep =  %EDITC(ECRANNUMEROLIVRAISON : 'X');
     //     VRESTKDS.Emplacement = ;
     //     VRESTKDS.Lot = ;
     //     VRESTKDS.ElementDeLot  = ;

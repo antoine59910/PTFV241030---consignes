@@ -36,7 +36,7 @@
      A                                      EDTCDE(3)
      A            ELQINV         4Y 0B  7 70ALIAS(ECRANLIGNEQUANTITEINVENTAIRE)
      A  40                                  DSPATR(ND)
-     A  41                                  DSPATR(PR)
+     A  40                                  DSPATR(PR)
      A                                      EDTCDE(3)
      A                                      TEXT('EcranLigneQuantiteInventaire')
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
@@ -59,23 +59,35 @@
      A            ELIACT        30A     1 29DSPATR(HI)
      A                                      ALIAS(ECRANLIBELLEACTION)
      A                                  2 73TIME
+     A                                  3  2'Client:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+    A            ECDCLI         9   O  3 10
+     A                                      ALIAS(ECRANCODECLIENT)
+     A                                      TEXT('ECRANCODECLIENT')
+     A                                      COLOR(BLU)
+     A            ECLRSO        30   O  3 20
+     A                                      ALIAS(ECRANRAISONSOCIALECLIENT)
+     A                                      TEXT('ECRANRAISONSOCIALECLIENT')
+     A                                      COLOR(BLU)
+     A            ECLCOM        30   O  3 51ALIAS(ECRANNOMCOMMERCIALCLIENT)
+     A                                      TEXT('ECRANNOMCOMMERCIALCLIENT')
+     A                                      COLOR(BLU)
+     A                                  4  2'Adresse:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            ECLADR        30   O  4 11ALIAS(ECRANCLIENTADRESSE)
+     A                                      TEXT('ECRANCLIENTADRESSE')
+     A                                      COLOR(BLU)
+     A            ECLVIL        30   O  4 51ALIAS(ECRANCLIENTVILLE)
+     A                                      TEXT('ECRANCLIENTVILLE')
+     A                                      COLOR(BLU)
      A                                  6  8'CDE ART'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  6 29'Libellé 1'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A            ECDCLI         9   O  3  4
-     A                                      ALIAS(ECRANCODECLIENT)
-     A                                      TEXT('ECRANCODECLIENT')
-     A                                      COLOR(BLU)
-     A            ECLRSO        30   O  3 15
-     A                                      ALIAS(ECRANRAISONSOCIALECLIENT)
-     A                                      TEXT('ECRANRAISONSOCIALECLIENT')
-     A                                      COLOR(BLU)
-     A            ECLCOM        30   O  3 46ALIAS(ECRANNOMCOMMERCIALCLIENT)
-     A                                      TEXT('ECRANNOMCOMMERCIALCLIENT')
-     A                                      COLOR(BLU)
      A                                  6 70'QTE INV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)

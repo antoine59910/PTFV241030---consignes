@@ -54,7 +54,8 @@
      A                                      CF06(06 'Services')
      A                                      CA12(12 'Abandon')
      A                                      CA03(03 'Fin')
-     A                                      CF09(09 'Création UT')
+     A                                      CF09(09 'Création Livraison')
+     A                                      CF10(09 'Création Retour')
      A            ERDNB2         4S 0B  2  5SFLRCDNBR
      A                                      DSPATR(ND)
      A                                      DSPATR(PR)
@@ -122,6 +123,8 @@
      A                                      TEXT('Filtre sur les livraisons san-
      A                                      s retour')
      A                                  3  2'F9=Nouvelle livraison'
+     A                                      COLOR(WHT)
+     A                                  4  2'F10=Retour sans livraison'
      A                                      COLOR(WHT)
      A                                  3 27'L=Gérer livraison'
      A                                      COLOR(WHT)

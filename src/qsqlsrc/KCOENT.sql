@@ -19,6 +19,7 @@
 
 Create Table FIDVALSAC.KCOENT
 (
+   NumBLConsignes         For Column  NUMBLC Decimal(8, 0)   Not Null,
    NumeroLivraison        For Column  NUMLIV Decimal(8, 0)   Not Null,
    NombreEdition          For Column  NNBEDI Decimal(2, 0)   Not Null,
    LivraisonTimeStamp     For Column  LIVDAT Timestamp       Not Null,
@@ -33,12 +34,13 @@ Label On Table FIDVALSAC.KCOENT Is 'Consignes.: entetes des livraisons';
 
 -- Définition de la clé primaire
 Alter Table FIDVALSAC.KCOENT
-   Add Primary Key (NumeroLivraison);
+   Add Primary Key (NumBLConsignes);
 
 -- Column headings are defined in 20-character sections
 
 Label On FIDVALSAC.KCOENT
 (
+   NumBLConsignes         Is    'Numero              BL Consignes',
    NumeroLivraison        Is    'Numero              Livraison',
    NombreEdition          Is    'Nombre              Edition',
    LivraisonTimeStamp     Is    'Livraison           TimeStamp',
@@ -50,6 +52,7 @@ Label On FIDVALSAC.KCOENT
 
 Label On FIDVALSAC.KCOENT
 (
+   NumBLConsignes         Text Is    'Numero BL Consignes',
    NumeroLivraison        Text Is    'Numero Livraison',
    NombreEdition          Text Is    'Nombre Edition',
    LivraisonTimeStamp     Text Is    'Horodatage Livraison',
