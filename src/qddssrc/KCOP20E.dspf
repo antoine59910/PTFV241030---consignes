@@ -2,19 +2,15 @@
      A                                      DSPSIZ(24 80 *DS3)
      A                                      PRINT
      A          R GESTIONBAS
-     A                                      RTNCSRLOC(&EFORMA &EZONCU)
-     A                                      CSRLOC(ENOLIG ENOCOL)
-     A            ENOLIG         3S 0H      ALIAS(ECRANDEPLACERCURSEURLIGNE)
-     A            ENOCOL         3S 0H      ALIAS(ECRANDEPLACERCURSEURCOLONNE)
-     A            EFORMA        10A  H
-     A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
-     A                                 23  3'F2=Utilisateur'
+     A                                 23  2'F2=Utilisateur'
      A                                      COLOR(BLU)
-     A                                 23 27'F3=Fin'
+     A                                 23 22'F3=Fin'
      A                                      COLOR(BLU)
-     A                                 23 44'F6=Services'
+     A                                 23 36'F4=Recherche'
      A                                      COLOR(BLU)
-     A                                 23 65'F12=Abandon'
+     A                                 23 53'F6=Services'
+     A                                      COLOR(BLU)
+     A                                 23 67'F12=Abandon'
      A                                      COLOR(BLU)
      A            E1MSGERR      30     22  3ALIAS(ECRANMESSAGEERREUR)
      A                                      COLOR(RED)
@@ -26,19 +22,56 @@
      A                                      COLOR(TRQ)
      A            EVEOBJ        10A    24 70COLOR(PNK)
      A                                      ALIAS(ECRANVERBEOBJET)
+     A                                 24  2'F23=rech mult-critères'            
+     A                                      COLOR(BLU)                          
+     A          R FMSELECT                  OVERLAY
+     A                                      CF02(01 'Utilisateur')
+     A                                      CF04(04 'Recherche')
+     A                                      CF06(06 'Services')
+     A                                      CA12(12 'Abandon')
+     A                                      CA03(03 'Fin')
+     A                                      CA23(23 'Recherche multi-crit')
+     A                                      RTNCSRLOC(&EFORMA &EZONCU)
+     A                                      CSRLOC(ENOLIG ENOCOL)
+     A            ENOLIG         3S 0H      ALIAS(ECRANDEPLACERCURSEURLIGNE)
+     A            ENOCOL         3S 0H      ALIAS(ECRANDEPLACERCURSEURCOLONNE)
+     A            EFORMA        10A  H
+     A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
+     A            ELIACT        30A     1 28DSPATR(HI)
+     A                                      ALIAS(ECRANLIBELLEACTION)
+     A                                  1 73DATE
+     A                                      EDTCDE(Y)
+     A                                  2 73TIME
+     A                                 10 18'Code société . . :'                
+     A                                      DSPATR(UL)
+     A            ECOSTE         2   B 10 38
+     A                                      ALIAS(ECRANCODESOCIETE)
+     A                                      TEXT('Code société')
+     A                                 12 18'Code client . . .:'                
+     A                                      DSPATR(UL)
+     A            ECOCLI         9   B 12 38
+     A                                      ALIAS(ECRANCODECLIENT)
+     A                                      TEXT('Code client')
+     A                                 14 18'Date inventaire .:'                
+     A                                      DSPATR(UL)
+     A            EDAINV          L  B 14 38ALIAS(ECRANDATEINVENTAIRE)
+     A                                      DATFMT(*JOB)
+     A            ELISTE        20A     1  2ALIAS(ECRANLIBELLESOCIETE)          
      A          R GESTIONSFL                SFL
-     A            ELCDAR        20   O  7  8ALIAS(ECRANLIGNECODEARTICLE)
+     A            ELQINV         4Y 0B  9 66ALIAS(ECRANLIGNEQUANTITEINVENTAIRE)
+     A                                      TEXT('ECRANLIGNEQUANTITEINVENTAIRE')
+     A                                      EDTCDE(Z)
+     A  43                                  DSPATR(PR)
+     A            ELCDAR        20   O  9  2ALIAS(ECRANLIGNECODEARTICLE)
      A                                      TEXT('ECRANLIGNECODEARTICLE')
-     A            ELLIAR        30      7 29ALIAS(ECRANLIGNELIBELLE1ARTICLE)
+     A  70                                  COLOR(BLU)
+     A            ELLIAR        30      9 24ALIAS(ECRANLIGNELIBELLE1ARTICLE)
      A                                      TEXT('ECRANLIGNELIBELLE1ARTICLE')
-     A            ELQSTK         4Y 0O  7 61ALIAS(ECRANLIGNEQUANTITESTOCK)
-     A                                      TEXT('ECRANLIGNEQUANTITESTOCK')
-     A                                      EDTCDE(3)
-     A            ELQINV         4Y 0B  7 70ALIAS(ECRANLIGNEQUANTITEINVENTAIRE)
-     A  40                                  DSPATR(ND)
-     A  40                                  DSPATR(PR)
-     A                                      EDTCDE(3)
-     A                                      TEXT('EcranLigneQuantiteInventaire')
+     A  70                                  COLOR(BLU)
+     A            ELQTHE         4Y 0O  9 56ALIAS(ECRANLIGNEQUANTITETHEORIE)
+     A                                      TEXT('ECRANLIGNEQUANTITETHEORIE')
+     A                                      EDTCDE(Z)
+     A                                      COLOR(BLU)
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
      A  52                                  SFLDSPCTL
@@ -58,158 +91,133 @@
      A            ELISTE        20A     1  2ALIAS(ECRANLIBELLESOCIETE)
      A            ELIACT        30A     1 29DSPATR(HI)
      A                                      ALIAS(ECRANLIBELLEACTION)
-     A                                  2 73TIME
-     A                                  3  2'Client:'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-    A            ECDCLI         9   O  3 10
-     A                                      ALIAS(ECRANCODECLIENT)
-     A                                      TEXT('ECRANCODECLIENT')
-     A                                      COLOR(BLU)
-     A            ECLRSO        30   O  3 20
-     A                                      ALIAS(ECRANRAISONSOCIALECLIENT)
-     A                                      TEXT('ECRANRAISONSOCIALECLIENT')
-     A                                      COLOR(BLU)
-     A            ECLCOM        30   O  3 51ALIAS(ECRANNOMCOMMERCIALCLIENT)
-     A                                      TEXT('ECRANNOMCOMMERCIALCLIENT')
-     A                                      COLOR(BLU)
-     A                                  4  2'Adresse:'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-     A            ECLADR        30   O  4 11ALIAS(ECRANCLIENTADRESSE)
-     A                                      TEXT('ECRANCLIENTADRESSE')
-     A                                      COLOR(BLU)
-     A            ECLVIL        30   O  4 51ALIAS(ECRANCLIENTVILLE)
-     A                                      TEXT('ECRANCLIENTVILLE')
-     A                                      COLOR(BLU)
-     A                                  6  8'CDE ART'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-     A                                  6 29'Libellé 1'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-     A                                  6 70'QTE INV'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-     A                                  6 61'QTE STK'
-     A                                      DSPATR(UL)
-     A                                      COLOR(WHT)
-     A          R FM1
-     A                                      RTNCSRLOC(&EFORMA &EZONCU)
-     A                                      CSRLOC(ENOLIG ENOCOL)
-     A                                      CF02(02)
-     A                                      CF04(04)
-     A                                      CF06(06)
-     A                                      CF10(10)
-     A                                      CA12(12)
-     A                                      CF23(23)
-     A                                      CA03(03)
-     A                                      CF05(05)
-     A                                      OVERLAY
-     A            ENOLIG         3S 0H      ALIAS(ECRANDEPLACERCURSEURLIGNE)
-     A            ENOCOL         3S 0H      ALIAS(ECRANDEPLACERCURSEURCOLONNE)
-     A            EFORMA        10A  H
-     A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
-     A            ELISTE        20A  O  4  2ALIAS(ECRANLIBELLESOCIETE)
-     A                                      TEXT('ECRANLIBELLESOCIETE')         
-     A                                  4 72DATE
+     A                                  1 73DATE
      A                                      EDTCDE(Y)
-     A                                  5 72TIME
-     A                                 10 14'Société. . . . . . . :'
-     A            ECOSTE         2A  B 10 39
-     A  30                                  ERRMSG('Code société invalide')
-     A  74                                  DSPATR(PR)
+     A                                  2 73TIME
+     A                                  3  2'Société :'
+     A                                      COLOR(WHT)
+     A            ECOSTE         2   O  3 12COLOR(BLU)
      A                                      ALIAS(ECRANCODESOCIETE)
-     A                                      TEXT('ECRANCODESOCIETE')            
-     A                                  3  2'                                  -
-     A                                                                         -
-     A                                               '
-     A                                      DSPATR(UL)
-     A            ECHOIX         1Y 0B  1  3EDTCDE(4)
-     A                                      CHECK(ER)
-     A N74                                  DSPATR(PR)
-     A                                      ALIAS(ECRANCHOIXACTION)
-     A            ELIOP1        17A  O  1  6
-     A  81                                  DSPATR(RI)
-     A  81                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION1)
-     A                                      TEXT('ECRANACTION1')                
-     A            ELIOP2        17A  O  1 25
-     A  82                                  DSPATR(RI)
-     A  82                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION2)
-     A                                      TEXT('ECRANACTION2')                
-     A            ELIOP3        17A  O  1 44
-     A  83                                  DSPATR(RI)
-     A  83                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION3)
-     A                                      TEXT('ECRANACTION3')                
-     A            ELIOP4        17A  O  1 63
-     A  84                                  DSPATR(RI)
-     A  84                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION4)
-     A                                      TEXT('ECRANACTION4')                
-     A            ELIOP5        17A  O  2  6
-     A  85                                  DSPATR(RI)
-     A  85                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION5)
-     A                                      TEXT('ECRANACTION5')                
-     A            ELIOP6        17A  O  2 25
-     A  86                                  DSPATR(RI)
-     A  86                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION6)
-     A                                      TEXT('ECRANACTION6')                
-     A            ELIOP7        17A  O  2 44
-     A  87                                  DSPATR(RI)
-     A  87                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION7)
-     A                                      TEXT('ECRANACTION7')                
-     A            ELIOP8        17A  O  2 63
-     A  88                                  DSPATR(RI)
-     A  88                                  COLOR(PNK)
-     A                                      ALIAS(ECRANACTION8)
-     A                                      TEXT('ECRANACTION8')                
-     A                                 23 14'F3=Fin'
+     A            ELISOC        20   O  3 16ALIAS(ECRANLIBELLESOCIETESELECT)
      A                                      COLOR(BLU)
-     A                                 23 21'F4=Recherche'
-     A                                      COLOR(BLU)
-     A                                 23 46'F10=Action'
-     A                                      COLOR(BLU)
-     A                                 23 57'F12=Abandon'
-     A                                      COLOR(BLU)
-     A            EVEOBJ        10A  O 24 70COLOR(PNK)
-     A                                      ALIAS(ECRANVERBEOBJET)
-     A            ELIACT        30A  O  4 28DSPATR(HI)
-     A                                      ALIAS(ECRANLIBELLEACTION)
-     A                                      TEXT('ECRANLIBELLEACTION')          
-     A                                 12 14'Code client. . . . . :'
-     A            ECOCLI         9A  B 12 39
-     A  74                                  DSPATR(PR)
-     A  32                                  ERRMSG('Code client invalide')
-     A  35                                  ERRMSG('Au moins un code doit être -
-     A                                      renseigné')
+     A                                  4  2'Client :'
+     A                                      COLOR(WHT)
+     A            ECOCLI         9   O  4 11COLOR(BLU)
      A                                      ALIAS(ECRANCODECLIENT)
-     A                                      TEXT('ECRANCODECLIENT')             
-     A                                 23 69'F23=Critères'
+     A            ECLISO        30   O  4 21ALIAS(ECRANCLIENTLIBELLE)
      A                                      COLOR(BLU)
-     A                                 23 34'F6=Services'
+     A                                  5  2'Date inventaire :'
+     A                                      COLOR(WHT)
+     A            EDAINV          L  O  5 21ALIAS(ECRANDATEINVENTAIRE)
+     A                                      DATFMT(*JOB)
      A                                      COLOR(BLU)
-     A                                 23  2'F2=Utilis.'
-     A                                      COLOR(BLU)
-     A            ELICLI        30A  O 12 49ALIAS(ECRANLIBELLECLIENT)
-     A                                      TEXT('ECRANLIBELLECLIENT')          
-     A          R ECREAT                    WINDOW(6 10 7 62)
-     A                                      CA12(12)
-     A                                  1 23'Saisie d''inventaire'              
-     A                                  4  2'Date de l''inventaire :'           
-     A                                  6 47'F12 = Annuler'
-     A                                      COLOR(BLU)
-     A            EWMSGERR      30      6  3ALIAS(WINDOWMESSAGEERREUR)
-     A                                      COLOR(RED)
+     A                                  8  2'Code article        '
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  8 24'Libellé article             '
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  8 56'VALS '                             
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  8 66'INVEN '                            
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A                                  7 56'   QUANTITE   '                    
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A          R FMFIN
+     A                                      CA12
+     A                                      BLINK
+     A                                      CLRL(*NO)
+     A                                      PUTOVR
+     A                                      OVERLAY
+     A                                      PROTECT
+     A            ECOFO1         1A  O 13 36OVRDTA
+     A                                      ALIAS(ECRANFINCHOIX1)
+     A                                 13 38'. Mise à jour et retour écran prec'
+     A            ECOFO2         1A  O 14 36OVRDTA
+     A                                      ALIAS(ECRANFINCHOIX2)
+     A                                 14 38'. Retour écran prec sans mise à jo'
+     A                                 15 38'ur'
+     A            ECOFO3         1   O 15 36OVRDTA
+     A                                      ALIAS(ECRANFINCHOIX3)
+     A                                 15 40'. Mise à jour et fin de programme'
+     A            ECOFO4         1A  O 16 36OVRDTA
+     A                                      ALIAS(ECRANFINCHOIX4)
+     A                                 16 38'. Fin de programme sans mise à jou'
+     A                                 17 38'r'
+     A                                 17 34'  5 . Reprise'
+     A                                 10 32'                                  '
      A                                      DSPATR(RI)
-     A  84                                  DSPATR(ND)
-     A            EDAINV          L  B  4 25DATFMT(*JOB)                        
-     A                                      ALIAS(ECRANDATEINVENTAIRE)          
-     A  31                                  ERRMSG('Date de livraison non valid-
-     A                                      e')                                 
-     A                                      TEXT('ECRANDATEINVENTAIRE')         
+     A                                      COLOR(BLU)
+     A                                 11 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 12 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 13 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 14 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 15 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 16 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 17 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 18 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 19 32' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 20 32'                                  '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 11 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 12 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 13 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 14 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 15 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 16 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 17 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 18 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 19 79' '
+     A                                      DSPATR(RI)
+     A                                      COLOR(BLU)
+     A                                 19 34'                F12=Abandon'
+     A                                      COLOR(BLU)
+     A                                 11 34'               Fin de travail'
+     A                                      DSPATR(HI)
+     A                                 15 34' '
+     A                                 16 34' '
+     A                                 18 34'                                  '
+     A                                 12 34'                                  '
+     A            ECHOIF         1Y 0B 13 34OVRDTA
+     A                                      CHECK(ER)
+     A                                      EDTCDE(4)
+     A                                      ALIAS(ECRANFINCHOIXACTION)
+     A                                 14 34' '    
