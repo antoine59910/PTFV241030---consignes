@@ -10,11 +10,13 @@
      A            EZONCU        10A  H      ALIAS(ECRANZONECURSEUR)
      A                                 23  3'F2=Utilisateur'
      A                                      COLOR(BLU)
-     A                                 23 24'F3=Fin'
+     A                                 23 20'F3=Fin'
      A                                      COLOR(BLU)
-     A                                 23 41'F6=Services'
+     A                                 23 43'F6=Services'
      A                                      COLOR(BLU)
-     A                                 23 57'F9=Nouvelle livraison'
+     A                                 23 56'F9=Nouvelle livraison'
+     A                                      COLOR(BLU)
+     A                                 24  3'F10=Retour sans LIV'
      A                                      COLOR(BLU)
      A            E1MSGERR      30     22  3ALIAS(ECRANMESSAGEERREUR)
      A                                      COLOR(RED)
@@ -26,22 +28,34 @@
      A                                      COLOR(TRQ)
      A            EVEOBJ        10A    24 70COLOR(PNK)
      A                                      ALIAS(ECRANVERBEOBJET)
+     A                                 23 29'F4=Recherche'
+     A                                      COLOR(BLU)
      A          R GESTIONSFL                SFL
-     A            ELOPTAC        1   B  8  3ALIAS(ECRANLIGNEACTION)
+     A            ELOPTAC        1   B  8  2ALIAS(ECRANLIGNEACTION)
+     A                                      TEXT('ECRANLIGNEACTION')
      A  70                                  COLOR(BLU)
-     A            ELNULIV        8Y 0O  8  5ALIAS(ECRANLIGNENUMEROLIVRAISON)
+     A            ELNUBLC        8Y 0O  8  4ALIAS(ECRANLIGNENUMEROBLCONSIGNE)
+     A                                      TEXT('ECRANLIGNENUMEROBLCONSIGNE')
      A  70                                  COLOR(BLU)
-     A            ELDECL        30   O  8 37ALIAS(ECRANLIGNEDESIGNATIONCLIENT)
+     A            ELNULIV        8Y 0O  8 13ALIAS(ECRANLIGNENUMEROLIVRAISON)
+     A                                      TEXT('ECRANLIGNENUMEROLIVRAISON')
      A  70                                  COLOR(BLU)
-     A            ELNUFAC        8Y 0   8 14ALIAS(ECRANLIGNENUMEROFACTURE)
+     A            ELNUFAC        8Y 0   8 22ALIAS(ECRANLIGNENUMEROFACTURE)
+     A                                      TEXT('ECRANLIGNENUMEROFACTURE')
      A  70                                  COLOR(BLU)
-     A            ELCOTO         3      8 23ALIAS(ECRANLIGNECODETOURNEE)
+     A            ELCOTO         3      8 31ALIAS(ECRANLIGNECODETOURNEE)
+     A                                      TEXT('ECRANLIGNECODETOURNEE')
      A  70                                  COLOR(BLU)
-     A            ELCOCL         9      8 27ALIAS(ECRANLIGNECODECLIENT)
+     A            ELCOCL         9      8 35ALIAS(ECRANLIGNECODECLIENT)
+     A                                      TEXT('ECRANLIGNECODECLIENT')
      A  70                                  COLOR(BLU)
-     A            ELDALI          L  O  8 68ALIAS(ECRANLIGNEDATELIVRAISON)
+     A            ELDALI          L  O  8 66ALIAS(ECRANLIGNEDATELIVRAISON)
+     A                                      TEXT('ECRANLIGNEDATELIVRAISON')
+     A                                      DATFMT(*DMY)
      A  70                                  COLOR(BLU)
-     A                                      DATFMT(*JOB)
+     A            ELDECL        20   O  8 45ALIAS(ECRANLIGNEDESIGNATIONCLIENT)
+     A                                      TEXT('ECRANLIGNEDESIGNATIONCLIENT')
+     A  70                                  COLOR(BLU)
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
      A  52                                  SFLDSPCTL
@@ -55,7 +69,7 @@
      A                                      CA12(12 'Abandon')
      A                                      CA03(03 'Fin')
      A                                      CF09(09 'Création Livraison')
-     A                                      CF10(09 'Création Retour')
+     A                                      CF10(10 'Création Retour')
      A            ERDNB2         4S 0B  2  5SFLRCDNBR
      A                                      DSPATR(ND)
      A                                      DSPATR(PR)
@@ -66,59 +80,54 @@
      A                                  1 73DATE
      A                                      EDTCDE(Y)
      A                                  2 73TIME
-     A                                  6  5'N° LIV  '
+     A                                  6  2'O'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6  3'O'
+     A                                  6  4'N°BL CON'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 23'TOU'
+     A                                  6 13'N°LIVRAI'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 27'CDE CLI  '
+     A                                  6 22'N°FACTUR'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 37'Désignation client            '
+     A                                  6 31'TOU'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 14'N° FAC  '
+     A                                  6 35'CDE CLIEN'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 68'Date LIV'
+     A                                  6 66'Date LIV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A            ENULIF         8Y 0B  7  5COLOR(BLU)
+     A                                  6 45'Désignation client  '
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            ENULIF         8Y 0B  7 13COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROLIVRAISONFILTRE)
      A                                      TEXT('Filtre sur le numéro de livra-
      A                                      ison')
      A                                      EDTCDE(Z)
-     A            ENUFAF         8Y 0B  7 14COLOR(BLU)
+     A            ENUFAF         8Y 0B  7 22COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROFACTUREFILTRE)
      A                                      TEXT('Filtre sur le numéro de factu-
      A                                      re')
      A                                      EDTCDE(Z)
-     A            ENUTOF         3   B  7 23COLOR(BLU)
+     A            ENUTOF         3   B  7 31COLOR(BLU)
      A                                      ALIAS(ECRANNUMEROTOURNEEFILTRE)
      A                                      TEXT('Filtre sur le numéro de tourn-
      A                                      ée')
-     A            ENULIF3        9   B  7 27COLOR(BLU)
+     A            EDESCF         9   B  7 35COLOR(BLU)
      A                                      ALIAS(ECRANCODECLIENTFILTRE)
      A                                      TEXT('Filtre sur le code client')
-     A            EDECLF        30   B  7 37COLOR(BLU)
-     A                                      ALIAS(ECRANDESIGNATIONCLIENTFILTRE)
-     A                                      TEXT('Filtre sur la désignation cli-
-     A                                      ent')
-     A            EDALIF          L  B  7 68ALIAS(ECRANDATELIVRAISONFILTRE)
+     A            EDALIF          L  B  7 66ALIAS(ECRANDATELIVRAISONFILTRE)
      A                                      DATFMT(*JOB)
      A                                      COLOR(BLU)
-     A                                  7  1'FLT'
+     A                                  5  2'Masquer retours traités (X=filtre -
+     A                                      actif) :'
      A                                      COLOR(BLU)
-     A                                  5  1'FLT = Filtre'   
-     A                                      COLOR(BLU)
-     A                                  5 25'Masquer retours traités (X=FLT-
-     A                                       actif) :'
-     A                                      COLOR(BLU)
-     A            EAFLIF         1   B  5 65COLOR(BLU)
+     A            EAFLIF         1   B  5 45COLOR(BLU)
      A                                      ALIAS(ECRANLIVRAISSANSRETOURFILTRE)
      A                                      TEXT('Filtre sur les livraisons san-
      A                                      s retour')
@@ -132,12 +141,20 @@
      A                                      COLOR(WHT)
      A                                  3 65'V=Visualiser'
      A                                      COLOR(WHT)
+     A            ENUBLF         8Y 0B  7  4COLOR(BLU)
+     A                                      ALIAS(ECRANNUMEROBLCONSIGNES)
+     A                                      TEXT('Filtre sur le numéro du bon d-
+     A                                      e livraison de consig')
+     A                                      EDTCDE(Z)
+     A            EDECLF        20   B  7 45COLOR(BLU)
+     A                                      ALIAS(ECRANDESIGNATIONCLIENTFILTRE)
+     A                                      TEXT('Filtre sur la désignation cli-
+     A                                      ent')
      A          R ECREAT                    WINDOW(6 10 7 62)
      A                                      CA12(12)
-     A                                  2 22'Création Livraison'
-     A                                  4  2'Numéro Livraison :'
-     A            ECRLIV         8Y 0B  4 22ALIAS(WINDOWCREATIONLIVRAISON)
-     A                                      TEXT('WINDOWCREATIONLIVRAISON')
+     A                                  1 22'Création Livraison'
+     A                                  3  2'Numéro Livraison :'
+     A            ECRLIV         8Y 0B  3 21ALIAS(ECRANCREATIONLIVRAISONNUMERO)
      A                                      EDTCDE(Z)
      A                                  6 47'F12 = Annuler'
      A                                      COLOR(BLU)
@@ -145,3 +162,23 @@
      A                                      COLOR(RED)
      A                                      DSPATR(RI)
      A  84                                  DSPATR(ND)
+     A          R ECREAR                    WINDOW(6 10 7 62)
+     A                                      CA12(12)
+     A                                      CA04(04)
+     A                                      RTNCSRLOC(&EFORMR &EZONAR)
+     A            EFORMR        10A  H
+     A            EZONAR        10A  H      ALIAS(ECREARZONECURSEUR)
+     A                                  1 22'Retour sans livraison'
+     A                                  3  1'Code client :'
+     A            ECRRET         9   B  3 15ALIAS(WINDOWCODECLIENT)
+     A                                      TEXT('WINDOWCODECLIENT')
+     A                                  6 47'F12 = Annuler'
+     A                                      COLOR(BLU)
+     A            EWMSGERR      30      6  3ALIAS(WINDOWMESSAGEERREUR)
+     A                                      COLOR(RED)
+     A                                      DSPATR(RI)
+     A  84                                  DSPATR(ND)
+     A                                  4  8'Date :'
+     A            EDARET          L  B  4 15ALIAS(WINDOWDATERETOUR)
+     A                                      TEXT('WINDOWDATERETOUR')
+     A                                      DATFMT(*JOB) 

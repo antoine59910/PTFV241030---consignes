@@ -27,21 +27,21 @@
      A            EVEOBJ        10A    24 70COLOR(PNK)
      A                                      ALIAS(ECRANVERBEOBJET)
      A          R GESTIONSFL                SFL
-     A            ELCDAR        20   O  7  8ALIAS(ECRANLIGNECODEARTICLE)
+     A            ELCDAR        20   O  9  2ALIAS(ECRANLIGNECODEARTICLE)
      A                                      TEXT('ECRANLIGNECODEARTICLE')
-     A            ELLIAR        30      7 29ALIAS(ECRANLIGNELIBELLE1ARTICLE)
+     A            ELLIAR        30      9 24ALIAS(ECRANLIGNELIBELLE1ARTICLE)
      A                                      TEXT('ECRANLIGNELIBELLE1ARTICLE')
-     A            ELQLIV         4Y 0B  7 61ALIAS(ECRANLIGNEQUANTITELIVREE)
+     A            ELQLIV         4Y 0B  9 56ALIAS(ECRANLIGNEQUANTITELIVREE)
      A                                      TEXT('ECRANLIGNEQUANTITELIVREE')
-     A                                      EDTCDE(Z)  
+     A                                      EDTCDE(Z)
      A  42                                  DSPATR(PR)
      A  42                                  COLOR(WHT)
      A  43                                  DSPATR(RI)
-     A            ELQRET         4Y 0B  7 70ALIAS(ECRANLIGNEQUANTITERETOURNEE)
+     A            ELQRET         4Y 0B  9 64ALIAS(ECRANLIGNEQUANTITERETOURNEE)
      A  40                                  DSPATR(ND)
      A  41                                  DSPATR(PR)
      A  41                                  COLOR(WHT)
-     A                                      EDTCDE(Z)  
+     A                                      EDTCDE(Z)
      A                                      TEXT('ECRANLIGNEQUANTITERETOURNEE')
      A          R GESTIONCTL                SFLCTL(GESTIONSFL)
      A  51                                  SFLDSP
@@ -74,16 +74,16 @@
      A                                  4  2'Adresse:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  5  2'N° LIV:'
+     A                                  6  2'N° BL consignes:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  5 37'TOU:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6  8'Code article        '
+     A                                  8  2'Code article        '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 29'Libellé 1                     '
+     A                                  8 24'Libellé 1                     '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  5 20'N° FAC:'
@@ -106,9 +106,9 @@
      A            ECLVIL        30   O  4 51ALIAS(ECRANCLIENTVILLE)
      A                                      TEXT('ECRANCLIENTVILLE')
      A                                      COLOR(BLU)
-     A            ENUMLI         8Y 0O  5 10
-     A                                      ALIAS(ECRANNUMEROLIVRAISONCONSIGNES)
-     A                                      TEXT('ECRANNUMEROLIVRAISONCONSIGNES')
+     A            ENULIC         8Y 0O  6 19
+     A                                      ALIAS(ECRANNUMEROBLCONSIGNES)
+     A                                      TEXT('ECRANNUMEROBLCONSIGNES')
      A                                      COLOR(BLU)
      A            ENUMFA         8Y 0O  5 28
      A                                      ALIAS(ECRANNUMEROFACTURE)
@@ -125,18 +125,24 @@
      A                                      TEXT('ECRANDATELIVRAISON')
      A                                      DATFMT(*JOB)
      A                                      COLOR(BLU)
-     A                                  5 66'Nb Edition:'
+     A                                  6 30'Nb Edition:'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A            ENUEDI         2Y 0   5 78ALIAS(ECRANNUMEROEDITION)
+     A            ENUEDI         2Y 0   6 42ALIAS(ECRANNUMEROEDITION)
      A                                      TEXT('ECRANNUMEROEDITION')
      A                                      COLOR(BLU)
-     A                                  6 61'QTE LIV'
+     A                                  8 56'QTE LIV'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  6 70'QTE RET'
+     A                                  8 64'QTE RET'
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
+     A                                  5  2'N° LIV:'
+     A                                      DSPATR(UL)
+     A                                      COLOR(WHT)
+     A            ENUMLI         8Y 0   5 10ALIAS(ECRANNUMEROLIVRAISON)
+     A                                      TEXT('ECRANNUMEROLIVRAISON')
+     A                                      COLOR(BLU)
      A          R FMFIN
      A                                      CA12
      A                                      BLINK

@@ -1,4 +1,4 @@
-select * from FIDVALSAC.VENTLV where EAADLV = 25 order by emmdlv desc;
+select * from FIDVALSAC.VENTLV where EAADLV = 25 order by emmdlv desc;34042422;
 
 select * from FIDVALSAC.KCOENT;
 select * from FIDVALSAC.KCOLIG;
@@ -13,3 +13,14 @@ delete from FIDVALSAC.KCOLIG;
 delete from FIDVALSAC.KCOCUM;
 delete from FIDVALSAC.VRESTK;
 delete from FIDVALSAC.KCOF10;
+
+-- Supprime complétement
+-- drop TABLE FIDVALSAC.KCOENT;
+-- drop TABLE FIDVALSAC.KCOLIG;
+-- drop TABLE FIDVALSAC.KCOCUM;
+-- drop TABLE FIDVALSAC.VRESTK;
+-- drop TABLE FIDVALSAC.KCOF10;
+
+Select *
+FROM FIDVALSAC.VPARAM
+WHERE XCORAC = 'STE';

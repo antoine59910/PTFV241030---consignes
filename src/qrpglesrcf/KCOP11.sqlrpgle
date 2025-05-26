@@ -2,11 +2,6 @@
 Ctl-opt Option(*srcstmt:*nodebugio ) AlwNull(*usrctl) UsrPrf(*owner)
         DatFmt(*eur) DatEdit(*dmy) TimFmt(*hms) dftactgrp(*no);
 
-// Appel ligne de commande :
-// Création : 
-// CALL PGM(KCOP11) PARM(('LIVRAISON' (*CHAR 30)) ('CREATION' (*CHAR 30)) 
-// (75034677 (*DEC 8 0)))
-
 // --------------------------------------------------------------
 //       NOM        : KCOP11              TYPE : Interactif & Batch
 //
@@ -104,6 +99,7 @@ Dcl-Ds ParametresConsigne qualified;
     NombreExemplairesBL Char(2) Overlay(XLIPAR:*NEXT);
     CodeDepotConsignes Char(3) Overlay(XLIPAR:*NEXT);
     CodeMouvementSortie Char(2) Overlay(XLIPAR:*NEXT);
+    CompteurBLConsignes Char(8) Overlay(XLIPAR:*NEXT);
 End-Ds;
 
 //Societe
@@ -272,12 +268,12 @@ End-Ds;
 // Paramètres
 Dcl-Pi *N;
     // entrées
-    £NumBLConsignes                         Packed(8:0);//Numéro du bon de livraison de consignes
+    £NumeroBLConsignes                         Packed(8:0);//Numéro du bon de livraison de consignes
     £Operation                              Char(30);
     £Mode                                   Char(30);
     // Facultatif : Numéro de la livraison associée à la livraison/retour de consignes
-    £NumeroLivraison                        Packed(8:0) Options(*NoPass);
-
+    £NumeroLivraison                        Packed(8:0);
+    £CodeClient                             Char(9) Options(*NoPass);
     // sorties
 End-Pi ;
 // ---------------------------------------------------------------------
@@ -339,7 +335,17 @@ DoW not Fin;
                     When EcranFinChoixAction = 3 AND EcranFinChoix3 <> '*';
                         // Vérification et écriture dans tous les cas sauf visualisation
                         If £Mode <> VISUALISATION;
+
                             If Verification();
+                                // On incrémente 
+                                // le compteur du numéro de bon de livraison 
+                                // en cas de création
+                                If (£Operation = LIVRAISON and £Mode = CREATION)
+                                OR (£Operation = RETOUR and £Mode = CREATION 
+                                and £NumeroLivraison = 0 );
+                                    IncrementCompteurBL();
+                                EndIf;
+                                
                                 EcritureTables();
                                 //Gestion de l édition du PRTF
                                 If £Operation = LIVRAISON 
@@ -432,7 +438,7 @@ EndDo;
 Dcl-Proc InitialisationProgramme;
    //--- 1. Initialisation des variables globales ---
     Fin = *Off;                           
-    Refresh = *Off;                      
+    Refresh = *Off;
 
    //--- 2. Récupération paramètres ---
    // Informations société
@@ -462,6 +468,7 @@ Dcl-Proc InitialisationProgramme;
     Indicateur.GESTIONBAS_MasquerMessageInfo = *On;
     ECRANMESSAGEERREUR = *Blanks;
     ECRANMESSAGEINFO = *Blanks;
+    ECRANNUMEROBLCONSIGNES = £NumeroBLConsignes;
 
    // Sous-fichier
     Indicateur.GESTIONCTL_SousFichierClear = *On;
@@ -478,7 +485,7 @@ Dcl-Proc InitialisationProgramme;
 
         Exec SQL
             SELECT DISTINCT 
-                V.ENULIV as numeroLivraison,
+                V.ENULIV as numeroLivraisonVENTLV,
                 V.ENUFAC as numeroFacture, 
                 V.ECOTRA as codeTournee, 
                 V.ECOCLL as codeClient,
@@ -515,12 +522,30 @@ Dcl-Proc InitialisationProgramme;
             where V.ENULIV = :£NumeroLivraison;
         GestionErreurSQL();
 
-    Else;
+    //Dans le cas d'une création d'un retour sans livraison
+    Elseif (£Mode = CREATION and £Operation = RETOUR and £NumeroLivraison = 0) ;
+        //Initialisation des variables
+        ECRANNUMEROLIVRAISON = 0;
+        ECRANDATELIVRAISON = %DATE('1940-01-01');
+        ECRANNUMEROFACTURE = 0;
+        ECRANNUMEROTOURNEE = *BLANKS;
+        ECRANNUMEROEDITION = 0;
+        ECRANCODECLIENT = £CodeClient;
+        
 
-    //Sinon, on récupère les informations également dans la table KCOENT
+        //Récupération des informations clients
         exec SQL
-    SELECT DISTINCT 
-            K.NumBLConsignes as NumBLConsignes,
+            Select CLIDES, CLISOC
+            Into :ECRANRAISONSOCIALECLIENT, :EcranNomCommercialClient
+            From CLIENT
+            Where CCOCLI = :EcranCodeClient;
+        GestionErreurSQL();
+
+    Else;
+        //On récupère les informations également dans la table KCOENT
+        exec SQL
+            SELECT DISTINCT 
+            K.NUMEROLIVRAISON as NumeroLivraisonKCOENT,
             K.NombreEdition as numeroEdition,
             V.ENUFAC as numeroFacture, 
             V.ECOTRA as codeTournee, 
@@ -545,7 +570,7 @@ Dcl-Proc InitialisationProgramme;
                 )
                 ELSE NULL
             END AS dateLivraison
-    Into    :ECRANNUMEROLIVRAISONCONSIGNES, 
+    Into    :ECRANNUMEROLIVRAISON, 
             :ECRANNUMEROEDITION, 
             :ECRANNUMEROFACTURE, 
             :ECRANNUMEROTOURNEE,
@@ -556,7 +581,7 @@ Dcl-Proc InitialisationProgramme;
     FROM KCOENT K
     LEFT JOIN VENTLV V ON V.ENULIV = K.NUMEROLIVRAISON
     LEFT JOIN CLIENT C ON C.CCOCLI = V.ECOCLL
-    Where K.NUMEROLIVRAISON = :£NumeroLivraison;
+    Where K.NumeroBLConsignes = :£NumeroBLConsignes;
         GestionErreurSQL();
     EndIf;
 
@@ -716,7 +741,7 @@ Dcl-Proc ChargerSousFichier;
                 Into :EcranLigneQuantiteLivree,
                      :EcranLigneQuantiteRetournee
                 From KCOLIG
-                Where numeroLivraison = :£NumeroLivraison 
+                Where NumeroBLConsignes = :£NumeroBLConsignes 
                 AND codeArticle = :EcranLigneCodeArticle;
                
                 // Si on est en création de retour, 
@@ -872,7 +897,7 @@ Dcl-Proc Verification;
                     Select QUANTITELIVREE
                     Into :KCOLIG_AncienneQuantiteLivree
                     From KCOLIG
-                    Where NumeroLivraison = :£NumeroLivraison
+                    Where NumeroBLConsignes = :£NumeroBLConsignes
                     And CodeArticle = :EcranLigneCodeArticle;
                     If SQLCODE = 0;
                         If (EcranLigneQuantiteLivree > KCOLIG_AncienneQuantiteLivree);
@@ -970,57 +995,61 @@ Dcl-Proc EcritureTables;
     EcritureKCOENT();
 
     //INIT KCOLIG
-    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
+    NEW_KCOLIG.NumeroBLConsignes = ECRANNUMEROBLCONSIGNES; 
 
     For i = 1 to NombreTotalLignesSF;
         Chain i GESTIONSFL;
 
         Select;
-            when £Mode = CREATION;
-                // -- CREATION LIVRAISON
-                If £Operation = LIVRAISON And EcranLigneQuantiteLivree > 0;
-                    // --- CREATION LIVRAISON - KCOCUM
-                    p_EcritureKCOCUM.CodeClient = EcranCodeClient;
-                    p_EcritureKCOCUM.CodeArticle = EcranLigneCodeArticle;
-                    p_EcritureKCOCUM.QuantiteLivree = EcranLigneQuantiteLivree;
-                    p_EcritureKCOCUM.QuantiteRetournee = 0;
-                    p_EcritureKCOCUM.AncienneQuantiteLivree = 0;
-                    p_EcritureKCOCUM.AncienneQuantiteRetournee = 0; 
+            // -- CREATION LIVRAISON
+            when £Mode = CREATION And £Operation = LIVRAISON ANd EcranLigneQuantiteLivree > 0;
+                // --- CREATION LIVRAISON - KCOCUM
+                p_EcritureKCOCUM.CodeClient = EcranCodeClient;
+                p_EcritureKCOCUM.CodeArticle = EcranLigneCodeArticle;
+                p_EcritureKCOCUM.QuantiteLivree = EcranLigneQuantiteLivree;
+                p_EcritureKCOCUM.QuantiteRetournee = 0;
+                p_EcritureKCOCUM.AncienneQuantiteLivree = 0;
+                p_EcritureKCOCUM.AncienneQuantiteRetournee = 0; 
 
-                    EcritureKCOCUM(p_EcritureKCOCUM.CodeClient
+                EcritureKCOCUM(p_EcritureKCOCUM.CodeClient
                         :p_EcritureKCOCUM.CodeArticle
                         :p_EcritureKCOCUM.QuantiteLivree
                         :p_EcritureKCOCUM.QuantiteRetournee
                         :p_EcritureKCOCUM.AncienneQuantiteLivree
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
-
                     // --- CREATION LIVRAISON KCOLIG
-                    NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
-                    NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
-                    NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
-                    KCOLIGExiste = *Off;
+                NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
+                NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
+                NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
+                KCOLIGExiste = *Off;
 
-                    EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
+                EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
 
 
                     // --- CREATION LIVRAISON  - VRESTK
-                    EcritureVRESTK(
+                EcritureVRESTK(
                             EcranLigneCodeArticle 
                             :EcranLigneQuantiteLivree 
                             :SORTIE_STOCK);
 
-                EndIf;
 
-                // -- CREATION RETOUR
-                If £Operation = RETOUR;
+
+            // -- CREATION RETOUR
+            when £Mode = CREATION And £Operation = RETOUR;
+
+                If £NumeroLivraison = 0; //Retour sans livraison
+                    OLD_KCOLIG.QuantiteLivree = 0;
+                    OLD_KCOLIG.QuantiteRetournee = 0;
+                    KCOLIGExiste = *Off;
+                Else; // Retour ayant eu une livraison
                     //Initialisation : Récupération des anciennes valeurs de livraison
                     Exec SQL
                         select quantiteLivree
                         Into 
                             :OLD_KCOLIG.QuantiteLivree
                         From KCOLIG
-                        Where NumeroLivraison = :ECRANNUMEROLIVRAISONCONSIGNES 
+                        Where NumeroBLConsignes = :ECRANNUMEROBLCONSIGNES 
                         And CodeArticle = :EcranLigneCodeArticle;
                     If SQLCode = 100;//Aucune donnée trouvée
                         OLD_KCOLIG.QuantiteLivree = 0;
@@ -1030,20 +1059,21 @@ Dcl-Proc EcritureTables;
                         KCOLIGExiste = *On;
                         GestionErreurSQL();
                     EndIf;
+                EndIf;
 
-                    // On ne gère que les cas où il y a eu une modification sur la livraison
-                    // Ou une quantité a été saisie sur un retour
-                    If (OLD_KCOLIG.QUANTITELIVREE <> EcranLigneQuantiteLivree
+                // On ne gère que les cas où il y a eu une modification sur la livraison
+                // Ou une quantité a été saisie sur un retour
+                If (OLD_KCOLIG.QUANTITELIVREE <> EcranLigneQuantiteLivree
                         OR EcranLigneQuantiteRetournee > 0);
 
                         // -- CREATION RETOUR KCOCUM
-                        p_EcritureKCOCUM.CodeClient = EcranCodeClient;
-                        p_EcritureKCOCUM.CodeArticle = EcranLigneCodeArticle;
-                        p_EcritureKCOCUM.QuantiteLivree = EcranLigneQuantiteLivree;
-                        p_EcritureKCOCUM.QuantiteRetournee = EcranLigneQuantiteRetournee;
-                        p_EcritureKCOCUM.AncienneQuantiteLivree = OLD_KCOLIG.QuantiteLivree;
-                        p_EcritureKCOCUM.AncienneQuantiteRetournee = 0; 
-                        EcritureKCOCUM(p_EcritureKCOCUM.CodeClient
+                    p_EcritureKCOCUM.CodeClient = EcranCodeClient;
+                    p_EcritureKCOCUM.CodeArticle = EcranLigneCodeArticle;
+                    p_EcritureKCOCUM.QuantiteLivree = EcranLigneQuantiteLivree;
+                    p_EcritureKCOCUM.QuantiteRetournee = EcranLigneQuantiteRetournee;
+                    p_EcritureKCOCUM.AncienneQuantiteLivree = OLD_KCOLIG.QuantiteLivree;
+                    p_EcritureKCOCUM.AncienneQuantiteRetournee = 0; 
+                    EcritureKCOCUM(p_EcritureKCOCUM.CodeClient
                         :p_EcritureKCOCUM.CodeArticle
                         :p_EcritureKCOCUM.QuantiteLivree
                         :p_EcritureKCOCUM.QuantiteRetournee
@@ -1052,37 +1082,37 @@ Dcl-Proc EcritureTables;
 
 
                         // --- CREATION RETOUR - KCOLIG
-                        NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
-                        NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
-                        NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
+                    NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
+                    NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
+                    NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
 
-                        EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
+                    EcritureKCOLIG(NEW_KCOLIG:KCOLIGExiste);
                         
                         // --- CREATION RETOUR - VRESTK
                         // ---- CREATION RETOUR - VRESTK - Quantité livrée
-                        If OLD_KCOLIG.QUANTITELIVREE <> EcranLigneQuantiteLivree;
-                            If OLD_KCOLIG.QuantiteLivree >0;
-                                QuantiteVRESTK = OLD_KCOLIG.QuantiteLivree * -1;
-                                EcritureVRESTK(EcranLigneCodeArticle 
+                    If OLD_KCOLIG.QUANTITELIVREE <> EcranLigneQuantiteLivree;
+                        If OLD_KCOLIG.QuantiteLivree >0;
+                            QuantiteVRESTK = OLD_KCOLIG.QuantiteLivree * -1;
+                            EcritureVRESTK(EcranLigneCodeArticle 
                             : QuantiteVRESTK  
                             : SORTIE_STOCK);
-                            EndIf;
-                            If EcranLigneQuantiteLivree > 0;
-                                EcritureVRESTK(EcranLigneCodeArticle 
+                        EndIf;
+                        If EcranLigneQuantiteLivree > 0;
+                            EcritureVRESTK(EcranLigneCodeArticle 
                             : EcranLigneQuantiteLivree 
                             : SORTIE_STOCK);
-                            EndIf;
                         EndIf;
+                    EndIf;
 
                         // ---- CREATION RETOUR - VRESTK - Quantité Retournée
-                        If EcranLigneQuantiteRetournee > 0 ;
-                            EcritureVRESTK(
+                    If EcranLigneQuantiteRetournee > 0 ;
+                        EcritureVRESTK(
                                     EcranLigneCodeArticle 
                                     :EcranLigneQuantiteRetournee 
                                     :ENTREE_STOCK);
-                        EndIf;
                     EndIf;
                 EndIf;
+
 
             when £Mode = MODIFICATION;
                 //Récupération des anciennes valeurs saisies
@@ -1093,7 +1123,7 @@ Dcl-Proc EcritureTables;
                         :OLD_KCOLIG.QuantiteLivree,
                         :OLD_KCOLIG.QuantiteRetournee
                     From KCOLIG
-                    Where NumeroLivraison = :ECRANNUMEROLIVRAISONCONSIGNES 
+                    Where NumeroBLConsignes = :ECRANNUMEROBLCONSIGNES 
                     And CodeArticle = :EcranLigneCodeArticle;
                 If SQLCode = 100;//Aucune donnée trouvée
                     OLD_KCOLIG.QuantiteLivree = 0;
@@ -1121,7 +1151,7 @@ Dcl-Proc EcritureTables;
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
                     // --- MODIFICATION LIVRAISON - KCOLIG
-                    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
+                    NEW_KCOLIG.NumeroBLConsignes = ECRANNUMEROBLCONSIGNES; 
                     NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
                     NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
                     NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
@@ -1163,7 +1193,7 @@ Dcl-Proc EcritureTables;
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
                     // --- MODIFICATION RETOUR - KCOLIG
-                    NEW_KCOLIG.NumeroLivraison = ECRANNUMEROLIVRAISONCONSIGNES; 
+                    NEW_KCOLIG.NumeroBLConsignes = ECRANNUMEROBLCONSIGNES; 
                     NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
                     NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
                     NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
@@ -1211,7 +1241,6 @@ Dcl-Proc EcritureTables;
             OTHER;
         EndSl;
     EndFor;
-    
     IntegrationVRESTK();
 End-Proc;
 
@@ -1247,7 +1276,7 @@ Dcl-Proc EditionPRTF;
         :K£PIMP.r_conserver);
 
     // Construction texte d en-tête
-    prtf_txt_entete = 'Bon consignes ' + %char(£NumeroLivraison);
+    prtf_txt_entete = 'BL consignes ' + %char(£NumeroBLConsignes);
 
     //Execution de l OVRPRTF
     CommandeCL = 'OVRPRTF FILE(' + %trimr(PRTF_CODE_EDITION) + 
@@ -1257,7 +1286,6 @@ Dcl-Proc EditionPRTF;
                     ') HOLD(' + %trimr(K£PIMP.r_suspe) + 
                     ') SAVE(' + %trimr(K£PIMP.r_conserver) + 
                     ') USRDTA(' + %trimr(psds.User) + ')';
-    //FIXME: Le nombre d exemplaire je peux pas juste le prendre de KPIMP ?
     Monitor;
         ExecCL(CommandeCL);
     On-Error;
@@ -1269,7 +1297,7 @@ Dcl-Proc EditionPRTF;
     select NombreEdition + 1
     Into :NouveauNumeroEdition
     From KCOENT
-    Where NUMEROLIVRAISON = :£NumeroLivraison;
+    Where NumeroBLConsignes = :£NumeroBLConsignes;
     GestionErreurSQL();
 
     //Gestion de l édition du document    
@@ -1284,7 +1312,9 @@ Dcl-Proc EditionPRTF;
     PRTF_Heure = %Time();
     PRTF_NumeroEdition = NouveauNumeroEdition;
     PRTF_DateLivraison = ECRANDATELIVRAISON;
+
     Write ENTETE;
+
 
     Write Ligne;
 
@@ -1309,6 +1339,7 @@ Dcl-Proc EditionPRTF;
     PRTF_ZDSC09 = GetEnteteSociete(ZDSCXX);
     ZDSCXX='ZDSC10';
     PRTF_ZDSC10 = GetEnteteSociete(ZDSCXX);
+
     Write ENTSOC;
 
     Write Ligne;
@@ -1324,9 +1355,12 @@ Dcl-Proc EditionPRTF;
     PRTF_ClientVille = VMRICL.ULIVIL;
     PRTF_ClientCodePostal = VMRICL.UCOPOS;
     PRTF_CLIENTBUREAUDISTRIB = VMRICL.ULIBDI;
+
     Write ENTECLI;
 
+
     Write Ligne;
+
 
 
     For i = 1 to NombreTotalLignesSF;
@@ -1334,6 +1368,8 @@ Dcl-Proc EditionPRTF;
         PRTF_ARTICLECODE = ECRANLIGNECODEARTICLE;
         PRTF_ARTICLELIBELLE = ECRANLIGNELIBELLE1ARTICLE;
         PRTF_ARTICLEQUANTITE = ECRANLIGNEQUANTITELIVREE;
+        
+
         PRTF_PRIXUNITAIREARTICLE = GetPrixUnitaireArticle(
         Societe.Code
         :EcranCodeClient
@@ -1341,6 +1377,7 @@ Dcl-Proc EditionPRTF;
         :ECRANLIGNECODEARTICLE
         :ECRANLIGNEQUANTITELIVREE
         );
+
         PRTF_PRIXTOTALLIGNE= PRTF_PRIXUNITAIREARTICLE * ECRANLIGNEQUANTITELIVREE;
         PRTF_PRIXTOTALCLIENT = PRTF_PRIXTOTALCLIENT + PRTF_PRIXTOTALLIGNE;
         If (lignePagePRTF > 60);
@@ -1363,6 +1400,7 @@ Dcl-Proc EditionPRTF;
     EndFor;
     Write Ligne;
     
+
     Write TOTAL;
 
     // Pour déclencher l impression physique :
@@ -1374,7 +1412,7 @@ Dcl-Proc EditionPRTF;
     SET 
         NombreEdition = :NouveauNumeroEdition
     WHERE 
-        NUMEROLIVRAISON = :£NumeroLivraison;
+        NumeroBLConsignes = :£NumeroBLConsignes;
     GestionErreurSQL();
 
     //Suppression des paramètres d impression
@@ -1402,13 +1440,25 @@ Dcl-Proc EcritureKCOENT;
         When  £Operation = LIVRAISON And £Mode = CREATION;
             Exec Sql
             INSERT INTO KCOENT (
-                NUMEROLIVRAISON,     
+                NumeroBLConsignes,
+                NumeroLivraison,
+                NumeroFacture,
+                CodeTournee,
+                CodeClient,
+                DesignationClient,
+                DateLivraison,     
                 NombreEdition,       
                 LIVRAISONTIMESTAMP,  
                 LIVRAISONUTILISATEUR,
                 TOPRETOUR
             ) VALUES (
+                :£NumeroBLConsignes,
                 :£NumeroLivraison,
+                :ECRANNUMEROFACTURE,
+                :EcranNumeroTournee,
+                :EcranCodeClient,
+                :EcranNomCommercialClient,
+                :EcranDateLivraison,
                 0,
                 CURRENT TIMESTAMP,
                 :psds.User,
@@ -1424,7 +1474,42 @@ Dcl-Proc EcritureKCOENT;
                     LIVRAISONTIMESTAMP = CURRENT TIMESTAMP,
                     LIVRAISONUTILISATEUR = :psds.User
                 WHERE 
-                    NUMEROLIVRAISON = :£NumeroLivraison;
+                    NumeroBLConsignes = :£NumeroBLConsignes;
+            GestionErreurSQL();
+
+
+        When  £Operation = RETOUR And £Mode = CREATION And £NumeroLivraison = 0;
+
+            Exec Sql
+            INSERT INTO KCOENT (
+                NumeroBLConsignes,
+                NumeroLivraison,
+                NumeroFacture,
+                CodeTournee,
+                CodeClient,
+                DesignationClient,   
+                DateLivraison,  
+                NombreEdition,
+                LivraisonTimeStamp,
+                LivraisonUtilisateur,       
+                TOPRETOUR,
+                RETOURTIMESTAMP,  
+                RETOURUTILISATEUR
+            ) VALUES (
+                :£NumeroBLConsignes,
+                0,
+                0,
+                0,
+                :EcranCodeClient,
+                :EcranNomCommercialClient,
+                CURRENT TIMESTAMP,
+                :psds.User,
+                CURRENT TIMESTAMP,
+                :psds.User,
+                'O',
+                CURRENT TIMESTAMP,
+                :psds.User
+            );
             GestionErreurSQL();
 
         //Création d un retour : Mise à jour du Top Retour
@@ -1436,7 +1521,7 @@ Dcl-Proc EcritureKCOENT;
                     RETOURTIMESTAMP = CURRENT TIMESTAMP,
                     RETOURUTILISATEUR = :psds.User
                 WHERE 
-                    NUMEROLIVRAISON = :£NumeroLivraison;
+                    NumeroBLConsignes = :£NumeroBLConsignes;
             GestionErreurSQL();
 
         //Modification d un retour : Mise à jour des logs de retour
@@ -1447,7 +1532,7 @@ Dcl-Proc EcritureKCOENT;
                     RETOURTIMESTAMP = CURRENT TIMESTAMP,
                     RETOURUTILISATEUR = :psds.User
                 WHERE 
-                    NUMEROLIVRAISON = :£NumeroLivraison;
+                    NumeroBLConsignes = :£NumeroBLConsignes;
             GestionErreurSQL();
         Other;
     EndSl;
@@ -1474,12 +1559,12 @@ Dcl-Proc EcritureKCOLIG;
         // Insertion d une nouvelle ligne
         Exec SQL
             INSERT INTO KCOLIG (
-                NumeroLivraison,
+                NumeroBLConsignes,
                 CodeArticle,
                 QuantiteLivree,
                 QuantiteRetournee
             ) VALUES (
-                :KCOLIG_New.NumeroLivraison,
+                :KCOLIG_New.NumeroBLConsignes,
                 :KCOLIG_New.CodeArticle,
                 :KCOLIG_New.QuantiteLivree,
                 :KCOLIG_New.QuantiteRetournee
@@ -1491,7 +1576,7 @@ Dcl-Proc EcritureKCOLIG;
             UPDATE KCOLIG
             SET QuantiteLivree = :KCOLIG_New.QuantiteLivree,
                 QuantiteRetournee = :KCOLIG_New.QuantiteRetournee
-            WHERE NumeroLivraison = :KCOLIG_New.NumeroLivraison
+            WHERE NumeroBLConsignes = :KCOLIG_New.NumeroBLConsignes
             AND CodeArticle = :KCOLIG_New.CodeArticle;
     EndIf;
 
@@ -1537,7 +1622,7 @@ Dcl-Proc InitialisationVRESTK;
     VRESTKDS.PrixAchat_Fabrication = 0;
      //     VRESTKDS.CodeGenerationCompta = ;
      //     VRESTKDS.LibelleMouvement = ;
-    VRESTKDS.RefMouvementNumBLNumRecep =  %EDITC(ECRANNUMEROLIVRAISON : 'X');
+    VRESTKDS.RefMouvementNumBLNumRecep =  %EDITC(ECRANNUMEROBLCONSIGNES : 'X');
     //     VRESTKDS.Emplacement = ;
     //     VRESTKDS.Lot = ;
     //     VRESTKDS.ElementDeLot  = ;
@@ -2167,6 +2252,45 @@ Dcl-Proc IntegrationVRESTK;
         Set XLIPAR = :VRESTKDS.NumeroMouvement
         Where XCORAC = :TABLE_CHARTREUSE_MOUVEMENT_STOCK_NUM
         And XCOARG = CONCAT(:ParametresConsigne.CodeDepotConsignes, :Societe.Code);
+    GestionErreurSQL();
+
+End-Proc;
+
+
+// Incrémentation du compteur BL consignes dans VPARAM
+Dcl-Proc IncrementCompteurBL;
+    Dcl-Pi *n End-Pi;
+    
+    Dcl-S NouveauCompteur Packed(8:0);
+    Dcl-S CompteurFormate Char(8);
+    
+    // Récupérer la valeur complète de XLIPAR
+    Exec SQL
+        SELECT XLIPAR
+        INTO :ParametresConsigne.XLIPAR
+        FROM VPARAM
+        WHERE XCORAC = :TABVV_PARAMETRESCONSIGNE
+        AND XCOARG = :Societe.Code;
+    GestionErreurSQL();
+
+    // Lire le compteur actuel depuis la structure overlay
+    // et l'incrémenter pour obtenir le prochain numéro
+    NouveauCompteur = %Dec(ParametresConsigne.CompteurBLConsignes : 8 : 0) + 1;
+    
+    // Reformater le compteur avec des zéros de tête (8 positions)
+    CompteurFormate = %EditC(NouveauCompteur : 'X');
+    CompteurFormate = %SubSt('00000000' + %TrimL(CompteurFormate) : 
+                             %Len('00000000' + %TrimL(CompteurFormate)) - 7 : 8);
+    
+    // Mettre à jour le compteur dans la structure
+    ParametresConsigne.CompteurBLConsignes = CompteurFormate;
+    
+    // Mise à jour dans la base de données
+    Exec SQL
+        UPDATE VPARAM
+        SET XLIPAR = :ParametresConsigne.XLIPAR
+        WHERE XCORAC = :TABVV_PARAMETRESCONSIGNE
+        AND XCOARG = :Societe.Code;
     GestionErreurSQL();
 
 End-Proc;

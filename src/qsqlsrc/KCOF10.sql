@@ -14,7 +14,7 @@
 
 Create Table FIDVALSAC.KCOF10
 (
-   NumeroLivraison        For Column  NUMLIV Decimal(8, 0)   Not Null,
+   NumeroBLConsignes      For Column  NUMBLC Decimal(8, 0)   Not Null,
    Utilisateur            For Column  UTILIS Char(10)   Not Null,
    StartTimeStamp         For Column  STTIMS Timestamp   Not Null,
    EndTimeStamp           For Column  EDTIMS Timestamp ,
@@ -29,7 +29,7 @@ Label On Table FIDVALSAC.KCOF10 Is 'Consignes.: verrouillage des livraisons';
 
 Label On FIDVALSAC.KCOF10
 (
-   NumeroLivraison            Is    'Numero              Livraison',
+   NumeroBLConsignes          Is    'Numero              BL Consignes',
    Utilisateur                Is    'Utilisateur',
    StartTimeStamp             Is    'Start               TimeStamp',
    EndTimeStamp               Is    'End                 TimeStamp',   
@@ -39,7 +39,7 @@ Label On FIDVALSAC.KCOF10
 
 Label On FIDVALSAC.KCOF10
 (
-   NumeroLivraison            Text Is    'Numero Livraison',
+   NumeroBLConsignes          Text Is    'Numero bon de livraison consignes',
    Utilisateur                Text Is    'Utilisateur',
    StartTimeStamp             Text Is    'Start TimeStamp',
    EndTimeStamp               Text Is    'End TimeStamp',   
