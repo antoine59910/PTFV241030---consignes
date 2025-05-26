@@ -20,8 +20,7 @@ Ctl-opt Option(*srcstmt:*nodebugio) AlwNull(*usrctl) UsrPrf(*owner)
 //              - Saisir les quantités réellement présentes chez le client
 //              - Calculer les écarts d'inventaire
 //              - Mettre à jour les écarts dans KCOCUM
-//              - Historiser l'inventaire dans KCOHINV
-//              - Optionnellement générer des mouvements de stock d'ajustement
+//              - Génère les mouvements de stocks
 //
 //              Écrans :
 //                      Écran 1 : Sélection société/client et date d'inventaire
