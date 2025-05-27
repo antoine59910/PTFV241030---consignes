@@ -95,29 +95,26 @@
      A                                      EDTCDE(Y)
      A                                  2 73TIME
      A                                  3  2'Société :'
-     A                                      COLOR(WHT)
-     A            ECOSTE         2   O  3 12COLOR(BLU)
+     A                                      COLOR(WHT)                          
+     A            ECOSTE         2   O  3 12          
      A                                      ALIAS(ECRANCODESOCIETE)
      A            ELISOC        20   O  3 16ALIAS(ECRANLIBELLESOCIETESELECT)
-     A                                      COLOR(BLU)
      A                                  4  2'Client :'
      A                                      COLOR(WHT)
-     A            ECOCLI         9   O  4 11COLOR(BLU)
+     A            ECOCLI         9   O  4 11          
      A                                      ALIAS(ECRANCODECLIENT)
      A            ECLISO        30   O  4 21ALIAS(ECRANCLIENTLIBELLE)
-     A                                      COLOR(BLU)
      A                                  5  2'Date inventaire :'
      A                                      COLOR(WHT)
      A            EDAINV          L  O  5 21ALIAS(ECRANDATEINVENTAIRE)
      A                                      DATFMT(*JOB)
-     A                                      COLOR(BLU)
      A                                  8  2'Code article        '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  8 24'Libellé article             '
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
-     A                                  8 56'VALS '                             
+     A                                  8 56'THEO '                             
      A                                      DSPATR(UL)
      A                                      COLOR(WHT)
      A                                  8 66'INVEN '                            
@@ -135,20 +132,24 @@
      A                                      PROTECT
      A            ECOFO1         1A  O 13 36OVRDTA
      A                                      ALIAS(ECRANFINCHOIX1)
-     A                                 13 38'. Mise à jour et retour écran prec'
+     A                                 13 38'. Mise à jour et retour écran de g-
+     A                                      arde  '
      A            ECOFO2         1A  O 14 36OVRDTA
      A                                      ALIAS(ECRANFINCHOIX2)
-     A                                 14 38'. Retour écran prec sans mise à jo'
-     A                                 15 38'ur'
+     A                                 14 38'. Retour écran de garde sans mise -
+     A                                      à jour'
      A            ECOFO3         1   O 15 36OVRDTA
      A                                      ALIAS(ECRANFINCHOIX3)
-     A                                 15 40'. Mise à jour et fin de programme'
+     A                                 15 38'. Mise à jour et fin de programme -
+     A                                            '
      A            ECOFO4         1A  O 16 36OVRDTA
      A                                      ALIAS(ECRANFINCHOIX4)
-     A                                 16 38'. Fin de programme sans mise à jou'
-     A                                 17 38'r'
-     A                                 17 34'  5 . Reprise'
-     A                                 10 32'                                  '
+     A                                 16 38'. Fin de programme sans mise à jou-
+     A                                      r     '
+     A                                 17 34'  5 . Reprise                     -
+     A                                                '
+     A                                 10 32'                                  -
+     A                                                    '
      A                                      DSPATR(RI)
      A                                      COLOR(BLU)
      A                                 11 32' '
@@ -178,7 +179,8 @@
      A                                 19 32' '
      A                                      DSPATR(RI)
      A                                      COLOR(BLU)
-     A                                 20 32'                                  '
+     A                                 20 32'                                  -
+     A                                                    '
      A                                      DSPATR(RI)
      A                                      COLOR(BLU)
      A                                 11 79' '
@@ -208,16 +210,20 @@
      A                                 19 79' '
      A                                      DSPATR(RI)
      A                                      COLOR(BLU)
-     A                                 19 34'                F12=Abandon'
+     A                                 19 34'                F12=Abandon       -
+     A                                                '
      A                                      COLOR(BLU)
-     A                                 11 34'               Fin de travail'
+     A                                 11 34'               Fin de travail     -
+     A                                                '
      A                                      DSPATR(HI)
      A                                 15 34' '
      A                                 16 34' '
-     A                                 18 34'                                  '
-     A                                 12 34'                                  '
+     A                                 18 34'                                  -
+     A                                                '
+     A                                 12 34'                                  -
+     A                                                '
      A            ECHOIF         1Y 0B 13 34OVRDTA
      A                                      CHECK(ER)
      A                                      EDTCDE(4)
      A                                      ALIAS(ECRANFINCHOIXACTION)
-     A                                 14 34' '    
+     A                                 14 34' '
