@@ -5,63 +5,16 @@
   "NoSELECTAll": true,
   "UselessOperationCheck": false,
   "UppercaseConstants": true,
-  "IncorrectVariableCase": true,
+  "IncorrectVariableCase": false,
   "RequiresParameter": true,
   "RequiresProcedureDescription": false,
   "StringLiteralDupe": false,
   "RequireBlankSpecial": false,
   "CopybookDirective": "include",
-  "UppercaseDirectives": true,
+  "DirectiveCase": "upper",
   "NoGlobalsInProcedures": false,
+  "PrettyComments": true,
   "SpecificCasing": [
-    {
-      "operation": "Dcl-S",
-      "expected": "Dcl-S"
-    },
-    {
-      "operation": "Dcl-F",
-      "expected": "Dcl-F"
-    },
-    {
-      "operation": "Dcl-C",
-      "expected": "Dcl-C"
-    },
-    {
-      "operation": "Dcl-Ds",
-      "expected": "Dcl-Ds"
-    },
-    {
-      "operation": "END-DS",
-      "expected": "End-Ds"
-    },
-    {
-      "operation": "Dcl-Pi",
-      "expected": "Dcl-Pi"
-    },
-    {
-      "operation": "END-Pi",
-      "expected": "End-Pi"
-    },
-    {
-      "operation": "Dcl-Proc",
-      "expected": "Dcl-Proc"
-    },
-    {
-      "operation": "end-Proc",
-      "expected": "End-Proc"
-    },
-    {
-      "operation": "Dcl-Pr",
-      "expected": "Dcl-Pr"
-    },
-    {
-      "operation": "end-Pr",
-      "expected": "End-Pr"
-    },
-    {
-      "operation": "Dcl-Parm",
-      "expected": "Dcl-Parm"
-    },
     {
       "operation": "/INCLUDE",
       "expected": "/INCLUDE"
@@ -83,85 +36,246 @@
       "expected": "Exec SQL"
     },
     {
-      "operation": "ENDSL",
-      "expected": "EndSl"
+      "operation": "Dcl-S",
+      "expected": "Dcl-S"
     },
     {
-      "operation": "Select",
-      "expected": "Select"
+      "operation": "Dcl-Ds",
+      "expected": "Dcl-Ds"
     },
     {
-      "operation": "Chain",
-      "expected": "Chain"
+      "operation": "Dcl-Pi",
+      "expected": "Dcl-Pi"
     },
     {
-      "operation": "For",
-      "expected": "For"
+      "operation": "Dcl-Proc",
+      "expected": "Dcl-Proc"
     },
     {
-      "operation": "To",
-      "expected": "To"
+      "operation": "Dcl-Pr",
+      "expected": "Dcl-Pr"
     },
     {
-      "operation": "%Found",
-      "expected": "%Found"
+      "operation": "End-Ds",
+      "expected": "End-Ds"
     },
     {
-      "operation": "And",
-      "expected": "And"
+      "operation": "End-Pi",
+      "expected": "End-Pi"
     },
     {
-      "operation": "Or",
-      "expected": "Or"
+      "operation": "End-Proc",
+      "expected": "End-Proc"
     },
     {
-      "operation": "DoW",
-      "expected": "DoW"
-    },
-    {
-      "operation": "EndDo",
-      "expected": "EndDo"
+      "operation": "End-Pr",
+      "expected": "End-Pr"
     },
     {
       "operation": "If",
       "expected": "If"
     },
     {
+      "operation": "Endif",
+      "expected": "Endif"
+    },
+    {
       "operation": "EndIf",
-      "expected": "EndIf"
+      "expected": "Endif"
+    },
+    {
+      "operation": "Else",
+      "expected": "Else"
+    },
+    {
+      "operation": "Elseif",
+      "expected": "Elseif"
+    },
+    {
+      "operation": "ElseIf",
+      "expected": "Elseif"
+    },
+    {
+      "operation": "For",
+      "expected": "For"
+    },
+    {
+      "operation": "Endfor",
+      "expected": "Endfor"
+    },
+    {
+      "operation": "EndFor",
+      "expected": "Endfor"
+    },
+    {
+      "operation": "Dou",
+      "expected": "Dou"
+    },
+    {
+      "operation": "DoU",
+      "expected": "Dou"
+    },
+    {
+      "operation": "Enddo",
+      "expected": "Enddo"
+    },
+    {
+      "operation": "EndDo",
+      "expected": "Enddo"
+    },
+    {
+      "operation": "Dow",
+      "expected": "Dow"
+    },
+    {
+      "operation": "DoW",
+      "expected": "Dow"
+    },
+    {
+      "operation": "Select",
+      "expected": "Select"
+    },
+    {
+      "operation": "When",
+      "expected": "When"
+    },
+    {
+      "operation": "Other",
+      "expected": "Other"
+    },
+    {
+      "operation": "Endsl",
+      "expected": "Endsl"
+    },
+    {
+      "operation": "EndSl",
+      "expected": "Endsl"
+    },
+    {
+      "operation": "Monitor",
+      "expected": "Monitor"
+    },
+    {
+      "operation": "On-Error",
+      "expected": "On-Error"
+    },
+    {
+      "operation": "Endmon",
+      "expected": "Endmon"
+    },
+    {
+      "operation": "EndMon",
+      "expected": "Endmon"
     },
     {
       "operation": "Return",
       "expected": "Return"
     },
     {
-      "operation": "*Off",
-      "expected": "*Off"
+      "operation": "Chain",
+      "expected": "Chain"
     },
     {
-      "operation": "*On",
-      "expected": "*On"
+      "operation": "Read",
+      "expected": "Read"
     },
     {
-      "operation": "Char",
-      "expected": "Char"
+      "operation": "Write",
+      "expected": "Write"
     },
     {
-      "operation": "Zoned",
-      "expected": "Zoned"
+      "operation": "Update",
+      "expected": "Update"
+    },
+    {
+      "operation": "Delete",
+      "expected": "Delete"
+    },
+    {
+      "operation": "Clear",
+      "expected": "Clear"
+    },
+    {
+      "operation": "Reset",
+      "expected": "Reset"
+    },
+    {
+      "operation": "Eval",
+      "expected": "Eval"
+    },
+    {
+      "operation": "Callp",
+      "expected": "Callp"
+    },
+    {
+      "operation": "CallP",
+      "expected": "Callp"
+    },
+    {
+      "operation": "Exsr",
+      "expected": "Exsr"
+    },
+    {
+      "operation": "Begsr",
+      "expected": "Begsr"
+    },
+    {
+      "operation": "Endsr",
+      "expected": "Endsr"
+    },
+    {
+      "operation": "EndSr",
+      "expected": "Endsr"
+    },
+    {
+      "operation": "Setll",
+      "expected": "Setll"
+    },
+    {
+      "operation": "Setgt",
+      "expected": "Setgt"
+    },
+    {
+      "operation": "Reade",
+      "expected": "Reade"
+    },
+    {
+      "operation": "Readp",
+      "expected": "Readp"
+    },
+    {
+      "operation": "Readpe",
+      "expected": "Readpe"
+    },
+    {
+      "operation": "Open",
+      "expected": "Open"
+    },
+    {
+      "operation": "Close",
+      "expected": "Close"
+    },
+    {
+      "operation": "Unlock",
+      "expected": "Unlock"
+    },
+    {
+      "operation": "Commit",
+      "expected": "Commit"
+    },
+    {
+      "operation": "Rollback",
+      "expected": "Rollback"
     }
   ],
   "NoSQLJoins": false,
-  "PrettyComments": false,
   "NoUnreferenced": true,
-  "SQLHostVarCheck": true,
+  "SQLHostVarCheck": false,
   "RequireOtherBlock": true,
   "NoGlobalSubroutines": true,
   "NoExternalTo": [
-    "QCMD",
     "QP2TERM",
     "QSH",
-    "SYSTEM",
-    "QCMDEXC"
+    "SYSTEM"
   ]
 }

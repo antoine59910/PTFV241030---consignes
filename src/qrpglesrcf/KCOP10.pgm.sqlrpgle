@@ -1,12 +1,12 @@
 **free
 Ctl-opt Option(*srcstmt:*nodebugio) AlwNull(*usrctl) UsrPrf(*owner)
-        DatFmt(*iso) TimFmt(*hms) dftactgrp(*no) 
-        text('Programme de suivi des livraisons de consignes');
+        DatFmt(*iso) TimFmt(*hms) dftactgrp(*no)
+        text('Programme de suivi des livraisons de consignes')
+        bnddir('SPPVALSNEW/UTILS':'SPPVALSNEW/SRVPGM');
 
 // %Text('Programme de suivi des livraisons de consignes')
 // Appel ligne de commande :
-// CALL PGM(PTFV241030/KCOP10) PARM((GER  (*CHAR 4)) (LIVCON (*CHAR 6))
-//  ('Gestion livraison consignes' (*CHAR 30)))
+// CALL PGM(PTFV241030/KCOP10) PARM('GER' 'LIVCON' 'Gestion livraison consignes')
 
 ///
 // --------------------------------------------------------------
@@ -93,13 +93,6 @@ Dcl-F KCOP10E  WorkStn
 // ECRANLIGNECODECLIENT packed(9:0);       // Code client de la ligne
 // ECRANLIGNEDATELIVRAISON date;           // Date de livraison de la ligne
 
-// --- Appels de prototypes et de leurs DS-------------------------------
-// KCOP11 : Gestion des livraisons et retours des consignes : saisies
-//
-// @param £Operation - Type d'opération (LIVRAISON ou RETOUR)
-// @param £Mode - Mode de fonctionnement (CREATION/MODIFICATION/VISUALISATION) 
-// @param £NumeroLivraison - Numéro de la livraison à traiter
-
 Dcl-Pr KCOP11 ExtPgm('KCOP11');
     £NumBLConsignes    Packed(8:0) Const; // Numéro du bon livraison de consignes
     £Operation          Char(30) Const;    // Type d'opération
@@ -117,21 +110,26 @@ Dcl-Ds KCOP11_p qualified;
     CodeClient         Char(9);
 End-Ds;
 
-// Recherche valeur table chartreuse
-/DEFINE PR_VORPAR
-// Fenêtre utilisateur
-/DEFINE PR_GOAFENCL
-// Fenêtre service
-/DEFINE PR_GOASER
-//Recherche multi-critère client
-/DEFINE PR_VMRCLM
+Dcl-Pr GestionErreurSQL ind extproc('GESTIONERREURSQL');
+    p_codeSQL int(10) const;
+    p_messageContexte char(50) const options(*NoPass);
+End-Pr;
 
-/INCLUDE qincsrc,prototypes
+Dcl-Pr RechercheMulticriteresClient char(9) extproc('RECHERCHEMULTICRITERESCLIENT');
+    p_CodeSociete char(2);
+    p_CodeClient char(9) options(*nopass);
+End-Pr;
 
-/UNDEFINE PR_VORPAR
-/UNDEFINE PR_GOAFENCL
-/UNDEFINE PR_GOASER
-/UNDEFINE PR_VMRCLM
+Dcl-Pr AffichageFenetreUtilisateur extproc('AFFICHAGEFENETREUTILISATEUR');
+    p_codeVerbe char(3);
+    p_codeObjet char(5);
+End-Pr;
+
+Dcl-Pr AffichageFenetreServices extproc('AFFICHAGEFENETRESERVICES');
+End-Pr;
+
+Dcl-Pr GetCodeSociete char(20) extproc('GETCODESOCIETE');
+End-Pr;
 
 // --- Variables -------------------------------------------------------
 Dcl-S NombreTotalLignesSF Packed(4:0);
@@ -163,7 +161,7 @@ End-Ds;
 Dcl-Ds KCOF10_t extname('KCOF10') qualified template alias;
 End-Ds;
 
-//TABVV XCOPAR
+// TABVV XCOPAR
 Dcl-Ds ParametresConsigne qualified;
     XLIPAR Char(100);
     TypeArticle Char(1) Overlay(XLIPAR);
@@ -201,16 +199,12 @@ End-Ds ;
 //                              PROGRAMME   PRINCIPAL
 //
 // ---------------------------------------------------------------------
-// Paramètres
 Dcl-Pi *N;
     // entrées
     £CodeVerbe                                   Char(4);
     £CodeObjet                                   Char(6);
     £LibelleAction                               Char(30);
-
-    // sorties
 End-Pi ;
-// ---------------------------------------------------------------------
 
 // Initialisation SQL :
 Exec Sql
@@ -223,7 +217,7 @@ InitialisationProgramme();
 ChargerSousFichier();
 
 Fin = *Off;
-DoW not Fin;
+Dow not Fin;
 
     // Affichage de l écran avec attente de saisie
     Write GESTIONBAS;
@@ -240,13 +234,15 @@ DoW not Fin;
         When fichierDS.TouchePresse = F6;
             AffichageFenetreServices();
 
-        //Nouvelle création de livraison
+            // Nouvelle création de livraison
         When fichierDS.touchePresse = F9;
-            //Initialisation du numéro de livraison
+
+            // Initialisation du numéro de livraison
             EcranCreationLivraisonNumero = 0;
-            //Affichage fenetre création d une nouvelle livraison
+
+            // Affichage fenetre création d une nouvelle livraison
             finSaisieCreation = *Off;
-            DoW not finSaisieCreation;
+            Dow not finSaisieCreation;
                 EXFMT ECREAT;
                 Select;
                     When fichierDS.touchePresse = F12;
@@ -254,40 +250,41 @@ DoW not Fin;
 
                     When fichierDS.touchePresse = ENTREE;
                         If VerificationCreation(EcranCreationLivraisonNumero);
+                            
                             // Si vérification OK : Appel du programme de saisie KCOP11
                             KCOP11_p.NumBLConsignes = 
                                 %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
                             CodeActionVerrouillage = CODE_ACTION_CREATION_LIVRAISON;
                             VerrouillageLivraison(KCOP11_p.NumBLConsignes
                                                 :CodeActionVerrouillage);
-                            monitor;
+                            Monitor;
                                 KCOP11(KCOP11_p.NumBLConsignes
                                 :LIVRAISON
                                 :CREATION
                                 :EcranCreationLivraisonNumero);
                                 DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            on-error ;
+                            On-Error ;
                                 dsply 'Erreur pendant execution de KCOP11';
                                 DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            endmon;
+                            Endmon;
 
                             finSaisieCreation = *On;
 
-                        EndIf;
+                        Endif;
 
                     Other;
-                EndSl;
-            EndDo;
+                Endsl;
+            Enddo;
             Refresh = *On;
         
-       //Nouvelle création de retour
+            // Nouvelle création de retour
         When fichierDS.touchePresse = F10;
             finSaisieCreation = *Off;
             WindowCodeClient = *BLANKS;
             WindowDateRetour = *LOVAL;
             Indicateur.MasquerMessageErreurWindow = *On;
     
-            DoW not finSaisieCreation;
+            Dow not finSaisieCreation;
                 EXFMT ECREAR;
                 Select;
                     When fichierDS.touchePresse = F12;
@@ -304,42 +301,34 @@ DoW not Fin;
                             VerrouillageLivraison(KCOP11_p.NumBLConsignes
                                         : CodeActionVerrouillage);
                             // Appel du programme de saisie KCOP11 pour un retour sans livraison
-                            monitor;
+                            Monitor;
                                 KCOP11(KCOP11_p.NumBLConsignes
                                 : RETOUR
                                 : CREATION
                                 : 0
                                 : WindowCodeClient);
                                 DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            on-error;
+                            On-Error;
                                 dsply 'Erreur pendant execution de KCOP11';
                                 DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            endmon;
+                            Endmon;
 
                             // Fin 
                             finSaisieCreation = *On;
                             Refresh = *On;
-                        EndIf;
+                        Endif;
             
                     When fichierDS.touchePresse = F4;
                         Select;
                             When (ECREARZoneCurseur = 'ECRRET');
-                                VMRCLM.UCOSTE = CodeSociete;
-                                VMRCLM.UCOCLI = WindowCodeClient;
-                                PR_VMRCLM(VMRCLM.UCOSTE
-                                    : VMRCLM.UCORTR
-                                    : VMRCLM.UCOCLI
-                                    : VMRCLM.UMODI2);
-                                If (VMRCLM.UCORTR <> '1');
-                                    WindowCodeClient = VMRCLM.UCOCLI;
-                                EndIf;
-
+                                WindowCodeClient =  
+                                    RechercheMulticriteresClient(CodeSociete:WindowCodeClient);
                             Other;
-                        EndSl;
+                        Endsl;
 
                     Other;
-                EndSl;
-            EndDo;
+                Endsl;
+            Enddo;
 
         When fichierDS.TouchePresse = F12;
             Fin=*On;
@@ -353,7 +342,7 @@ DoW not Fin;
             If Verification();
                 If KCOP11_p.NumBLConsignes <> 0;
                     VerrouillageLivraison(KCOP11_p.NumBLConsignes:CodeActionVerrouillage);
-                    monitor;
+                    Monitor;
                         // dsply ('NumBLConsignes : '+ %char(KCOP11_p.NumBLConsignes));
                         // dsply ('Operation : '+ KCOP11_p.Operation);
                         // dsply ('Mode : '+ KCOP11_p.Mode);
@@ -363,27 +352,27 @@ DoW not Fin;
                             :KCOP11_p.Mode
                             :KCOP11_p.NumeroLivraison);
                         DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                    on-error;
+                    On-Error;
                         dsply 'Erreur pendant execution de KCOP11';
                         DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                    endmon;
+                    Endmon;
 
-                EndIf;
-            EndIf;
+                Endif;
+            Endif;
             Refresh = *On;
 
         Other;
-    EndSl;
+    Endsl;
 
     // Si rafraîchissement nécessaire, rechargement du sous-fichier
     If Refresh;
         ChargerSousFichier();
         Refresh = *Off;
-    EndIf;
+    Endif;
     
-EndDo;
+Enddo;
 
-*Inlr=*On;
+*inlr=*on;
 
 // ----------------------------------------------------------------------------
 //
@@ -405,7 +394,7 @@ Dcl-Proc InitialisationProgramme;
     // On supprime toutes les restrictions qui sont antiérieurs à la veille
     Exec SQL
                 DELETE FROM KCOF10 WHERE StartTimestamp < CURRENT_DATE - 1 DAY;
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode:'Purge fichier blocages');
 
     // 2. Initialisation de l écran 
     // Masquage des messages
@@ -426,12 +415,12 @@ Dcl-Proc InitialisationProgramme;
     ECRANNUMEROTOURNEEFILTRE = *BLANKS;
     ECRANCODECLIENTFILTRE = *BLANKS;
     ECRANDATELIVRAISONFILTRE = %DATE('1940-01-01');// Attention surtout pas mettre *LOVAL 
-    //Sinon bug dans la requete SQL car il compare avec la date '0001-01-01' qui n'existe pas en SQL
+    // Sinon bug dans la requete SQL car il compare avec la date '0001-01-01' qui n'existe pas en SQL
     ECRANNUMEROBLCONSIGNES = 0;
     ECRANDESIGNATIONCLIENTFILTRE = *BLANKS;
 
 
-    //3 . Récupération du code société
+    // 3 . Récupération du code société
     CodeSociete = GetCodeSociete();
 End-Proc;
 
@@ -482,11 +471,11 @@ Dcl-Proc ChargerSousFichier;
         And (:ECRANDATELIVRAISONFILTRE = Date('1940-01-01') 
         OR :EcranDateLivraisonFiltre = DateLivraison)
        ORDER BY NumeroBLConsignes desc, DateLivraison DESC, CodeTournee, CodeClient;
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode);
 
     // Ouverture du curseur
     exec sql OPEN C1;
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode);
 
     // Premier FETCH
     Exec SQL FETCH FROM C1 INTO 
@@ -498,14 +487,14 @@ Dcl-Proc ChargerSousFichier;
             :ECRANLIGNECODECLIENT,
             :ECRANLIGNEDESIGNATIONCLIENT,
             :ECRANLIGNEDATELIVRAISON;
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode);
 
     If SQLCode = 100; //Aucun enregistrement n a été trouvé
         ECRANMESSAGEERREUR = 'Aucune livraison trouvée';
         Indicateur.MasquerMessageErreur = *Off;
         
-    ElseIf SQLCode = 0;// Des enregistrements ont été trouvés
-        DoW SQLCode = 0;
+    Elseif SQLCode = 0;// Des enregistrements ont été trouvés
+        Dow SQLCode = 0;
             // Incrémentation du rang
             fichierDS.rang_sfl += 1;
 
@@ -517,7 +506,7 @@ Dcl-Proc ChargerSousFichier;
                 Indicateur.SousFichierCouleurBleu = *On; 
             Else;
                 Indicateur.SousFichierCouleurBleu = *Off; 
-            EndIf;
+            Endif;
 
             // Écriture dans le sous-fichier  
             Write GESTIONSFL;
@@ -532,15 +521,15 @@ Dcl-Proc ChargerSousFichier;
                     :ECRANLIGNECODECLIENT,
                     :ECRANLIGNEDESIGNATIONCLIENT,
                     :ECRANLIGNEDATELIVRAISON;
-            GestionErreurSQL();
-        EndDo;
+            GestionErreurSQL(sqlcode);
+        Enddo;
 
     Else;//Erreur requete
-        GestionErreurSQL();
-    EndIf;
+        GestionErreurSQL(sqlcode);
+    Endif;
     // Fermeture du curseur
     exec sql CLOSE C1;
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode);
 
     // Mémorisation du nombre total de lignes
     NombreTotalLignesSF = fichierDS.rang_sfl;
@@ -557,15 +546,15 @@ Dcl-Proc ChargerSousFichier;
             Indicateur.SousFichierEnd = *On;  // Affiche "FIN"
         Else;
             Indicateur.SousFichierEnd = *Off; // Affiche "MORE"
-        EndIf;
+        Endif;
         
     Else;
         // Pas de données : pas d'affichage du sous-fichier
-        //on ne doit PAS activer l affichage du sous-fichier s il est vide 
+        // on ne doit PAS activer l affichage du sous-fichier s il est vide 
         Indicateur.SousFichierDisplay = *Off;
         Indicateur.SousFichierDisplayControl = *On;
         Indicateur.SousFichierEnd = *Off;
-    EndIf;
+    Endif;
 
     // Positionnement initial
     EcranLigneSousFichier = 1;
@@ -591,7 +580,7 @@ Dcl-Proc Verification;
     Dcl-S Rang Zoned(2:0);
     Dcl-S SauvegardeAction Char(1);
     Dcl-S VerificationReturn Ind Inz(*On);
-    Dcl-S retourDejaEffectueChar(1);
+    Dcl-S retourDejaEffectue Char(1);
 
     // Initialisations
     Indicateur.MasquerMessageErreur = *On;
@@ -607,14 +596,14 @@ Dcl-Proc Verification;
     For i = 1 to NombreTotalLignesSF;
         Chain i GESTIONSFL;
     
-    // Vérifications
+        // Vérifications
         If ECRANLIGNEACTION <> *BLANKS;
             // Vérification qu il n y ait pas plusieurs actions
             If VerificationReturn = *On And SauvegardeAction <> *BLANKS;
                 EcranMessageErreur = 'Une seule action à la fois';
                 Indicateur.MasquerMessageErreur = *Off;
                 VerificationReturn = *Off;
-            EndIf;
+            Endif;
 
             // Vérification du blocage des livraisons
             If VerificationReturn = *On 
@@ -628,19 +617,19 @@ Dcl-Proc Verification;
                     Indicateur.MasquerMessageErreur = *Off;
                 Else;
 
-                EndIf;
-            EndIf;
+                Endif;
+            Endif;
 
-            //Gestion de l'action
+            // Gestion de l'action
             If VerificationReturn = *On;
                 KCOP11_p.NumBLConsignes = ECRANLIGNENUMEROBLCONSIGNE;
                 
                 Select;
-                    when ECRANLIGNEACTION = CODE_ACTION_MODIFIER_LIVRAISON;
+                    When ECRANLIGNEACTION = CODE_ACTION_MODIFIER_LIVRAISON;
                         // On vérifie qu'un retour n'a pas déjà été saisi
                         Exec SQL
                             SELECT TopRetour, NumeroLivraison
-                            INTO :r_TopRetour, :KCOP11_p.NumeroLivraison
+                            INTO :retourDejaEffectue, :KCOP11_p.NumeroLivraison
                             FROM KCOENT
                             WHERE NumeroBLConsignes = :ECRANLIGNENUMEROBLCONSIGNE;
                         If SQLCode = 0 and retourDejaEffectue= 'N';
@@ -654,21 +643,21 @@ Dcl-Proc Verification;
                             Indicateur.MasquerMessageInfo = *Off;
                             VerificationReturn = *Off;
                         Else;
-                            GestionErreurSQL();
+                            GestionErreurSQL(sqlcode);
                             EcranMessageErreur = 'Erreur SQL vérif Retour'; 
                             Indicateur.MasquerMessageErreur = *Off;
                             VerificationReturn = *Off;
-                        EndIf;
+                        Endif;
 
 
-                    when ECRANLIGNEACTION = CODE_ACTION_RETOUR;
+                    When ECRANLIGNEACTION = CODE_ACTION_RETOUR;
                         KCOP11_p.Operation = RETOUR;
                         // On vérifie si un retour existe déjà
                         // S'il n'existe pas, 
                         // Mode = création, S'il existe Mode = modification
                         Exec SQL
                             SELECT TopRetour, NumeroLivraison 
-                            INTO :r_TopRetour, :KCOP11_p.NumeroLivraison
+                            INTO :retourDejaEffectue, :KCOP11_p.NumeroLivraison
                             FROM KCOENT
                             WHERE NumeroBLConsignes = :ECRANLIGNENUMEROBLCONSIGNE;
                         If SQLCode = 0 and retourDejaEffectue= 'N';
@@ -678,30 +667,30 @@ Dcl-Proc Verification;
                             KCOP11_p.Mode = MODIFICATION;
                             CodeActionVerrouillage = CODE_ACTION_RETOUR;
                         Else;
-                            GestionErreurSQL();
+                            GestionErreurSQL(sqlcode);
                             EcranMessageErreur = 'Erreur SQL vérif Retour'; 
                             Indicateur.MasquerMessageErreur = *Off;
                             VerificationReturn = *Off;
-                        EndIf;
+                        Endif;
 
-                    when ECRANLIGNEACTION = CODE_ACTION_VISUALISER;
+                    When ECRANLIGNEACTION = CODE_ACTION_VISUALISER;
                         KCOP11_p.Operation = RETOUR;
                         KCOP11_p.Mode = VISUALISATION;
                         CodeActionVerrouillage = CODE_ACTION_VISUALISER;
 
-                    other;
+                    Other;
                         EcranMessageErreur = 'Choix action inconnu';
                         Indicateur.MasquerMessageErreur = *Off;
                         VerificationReturn = *Off;
 
-                EndSl;
+                Endsl;
 
-            EndIf;
+            Endif;
             Rang = Rang + 1;
             SauvegardeAction = ECRANLIGNEACTION;
 
-        EndIf;
-    EndFor;
+        Endif;
+    Endfor;
 
     Return VerificationReturn;
 
@@ -734,15 +723,15 @@ Dcl-Proc VerificationCreation;
             Into :Compteur
             FROM VENTLV
             Where ENULIV = :p_NumeroLivraisonCreation;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
         If Compteur = 0;
             Erreur = *On;
             WINDOWMESSAGEERREUR='LIV : ' 
             + %EDITC(p_NumeroLivraisonCreation:'Z') 
             + ' inexistante';
             Indicateur.MasquerMessageErreurWindow = *Off;
-        EndIf;
-    EndIf;
+        Endif;
+    Endif;
 
     // 2 - On vérifie que la livraison n existe pas déjà dans KCOENT
     If not Erreur;
@@ -751,27 +740,27 @@ Dcl-Proc VerificationCreation;
             Into :Compteur
             FROM KCOENT
             Where NumeroLivraison = :p_NumeroLivraisonCreation;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
         If Compteur > 0;
             Erreur = *On;
             WINDOWMESSAGEERREUR='LIV : ' 
             + %EDITC(p_NumeroLivraisonCreation:'Z') 
             + ' déjà créée';
             Indicateur.MasquerMessageErreurWindow = *Off;
-        EndIf;
-    EndIf;
+        Endif;
+    Endif;
 
     // 3 - On vérifie que quelqu'un n'est pas entrain de créer en même temps
     If not Erreur;
-        //Récupération des paramètres consignes : 
+        // Récupération des paramètres consignes : 
         Exec SQL
             Select XLIPAR
             Into :ParametresConsigne.XLIPAR
             FROM VPARAM
             Where XCORAC = :TABVV_PARAMETRESCONSIGNE;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
 
-        //On vérifie qu'un utilisateur n'est pas en création
+        // On vérifie qu'un utilisateur n'est pas en création
         NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
 
         utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
@@ -779,8 +768,8 @@ Dcl-Proc VerificationCreation;
             Erreur = *On;
             WINDOWMESSAGEERREUR='bloqué par ' + utilisateurBloquant;
             Indicateur.MasquerMessageErreurWindow = *Off;
-        EndIf;
-    EndIf;
+        Endif;
+    Endif;
 
     Return not Erreur;
 End-Proc;
@@ -819,18 +808,18 @@ Dcl-Proc VerificationCreationRetour;
             INTO :Compteur
             FROM CLIENT
             WHERE CCOCLI = :p_CodeClient;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
         
         If Compteur = 0;
             Erreur = *On;
             WINDOWMESSAGEERREUR = 'Client ' + %Trim(p_CodeClient) + ' inexistant';
             Indicateur.MasquerMessageErreurWindow = *Off;
-        EndIf;
-    ElseIf not Erreur and p_CodeClient = *Blanks;
+        Endif;
+    Elseif not Erreur and p_CodeClient = *Blanks;
         Erreur = *On;
         WINDOWMESSAGEERREUR = 'Code client obligatoire';
         Indicateur.MasquerMessageErreurWindow = *Off;
-    EndIf;
+    Endif;
     
     // 2 - Vérification de la date
     If not Erreur;
@@ -846,9 +835,9 @@ Dcl-Proc VerificationCreationRetour;
                 Erreur = *On;
                 WINDOWMESSAGEERREUR = 'Date retour > date du jour';
                 Indicateur.MasquerMessageErreurWindow = *Off;
-            EndIf;
-        EndIf;
-    EndIf;
+            Endif;
+        Endif;
+    Endif;
     
     // 3 - Vérification qu'il n'y a pas une création en cours
     If not Erreur;
@@ -858,7 +847,7 @@ Dcl-Proc VerificationCreationRetour;
             INTO :ParametresConsigne.XLIPAR
             FROM VPARAM
             WHERE XCORAC = :TABVV_PARAMETRESCONSIGNE;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
         
         // Vérification qu'un utilisateur n'est pas en création
         NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
@@ -868,8 +857,8 @@ Dcl-Proc VerificationCreationRetour;
             Erreur = *On;
             WINDOWMESSAGEERREUR = 'Bloqué par ' + utilisateurBloquant;
             Indicateur.MasquerMessageErreurWindow = *Off;
-        EndIf;
-    EndIf;
+        Endif;
+    Endif;
     
     Return not Erreur;
 End-Proc;
@@ -898,11 +887,11 @@ Dcl-Proc VerificationBlocage;
                 And LockFlag = '1';
     If (SqlCode = 100); // Pas de résultat trouvé
         r_userBlocage = *BLANKS; // La livraison nest pas verrouillée
-    ElseIf (SqlCode = 0); // Résultat trouvé
+    Elseif (SqlCode = 0); // Résultat trouvé
 
     Else;//Erreur SQL
-        GestionErreurSQL();
-    EndIf;
+        GestionErreurSQL(sqlcode);
+    Endif;
 
     Return r_userBlocage;
   
@@ -912,7 +901,7 @@ End-Proc;
 // VerrouillageLivraison
 // Ecrit dans la table KCOF10 pour le verrouillage de la livraison
 // On vérifie si le couple NumeroLivraisonConsignes/Utilisateur existe déjà, 
-//s il existe c est un update
+// s il existe c est un update
 // Sinon c est un insert INTO
 // @Param NumeroLivraison
 // @Param CodeAction
@@ -959,7 +948,7 @@ Dcl-Proc VerrouillageLivraison;
                 :KCOF10Ds.CodeAction,
                 :KCOF10Ds.LockFlag
             );
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
     Else;
         Exec SQL
             UPDATE KCOF10
@@ -968,8 +957,8 @@ Dcl-Proc VerrouillageLivraison;
                 LockFlag = :KCOF10Ds.LockFlag
             WHERE NumeroBLConsignes = :KCOF10Ds.NumeroBLConsignes 
             AND Utilisateur = :KCOF10Ds.Utilisateur;
-        GestionErreurSQL();
-    EndIf;
+        GestionErreurSQL(sqlcode);
+    Endif;
 End-Proc;
 
 ///
@@ -990,7 +979,7 @@ Dcl-Proc DeverrouillageLivraison;
         AND Utilisateur = :psds.user
         AND EndTimeStamp IS NULL;
     
-    GestionErreurSQL();
+    GestionErreurSQL(sqlcode);
 End-Proc;
 
 
@@ -1024,128 +1013,9 @@ Dcl-Proc GetLibelleSociete ;
                 FROM VPARAM
                 WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE;
     If SQLCode <> 0;
-        GestionErreurSQL();
+        GestionErreurSQL(sqlcode);
         LibelleSocieteReturn = *ALL'?';
-    EndIf;
+    Endif;
 
     Return LibelleSocieteReturn;
-End-Proc;
-
-///
-// Gestion des erreurs SQL
-// Affiche à l écran s il y a une erreur SQL
-///
-
-Dcl-Proc GestionErreurSQL;
-    // Tailles selon documentation DB2
-    Dcl-S MessageId         Char(10);
-    Dcl-S MessageId1        varchar(7) ;
-    Dcl-S MessageId2        like(MessageId1) ;
-    Dcl-S MessageText       Varchar(32672);
-    Dcl-S RowsCount         Int(10);
-    Dcl-S ReturnedSQLCode   Char(5);
-    Dcl-S ReturnedSQLState  Char(5);
-    Dcl-S LineNumber        Int(10);
-    // Variables pour gérer l'affichage du message
-    Dcl-S MessagePart       Varchar(52);            // Taille max d'un DSPLY
-    Dcl-S MessageLength     Int(10);
-    Dcl-S StartPos          Int(10);
-
-    If (SqlCode <> 0 And SqlCode <> 100);
-        exec sql GET DIAGNOSTICS
-                :RowsCount = ROW_COUNT;
-
-        exec sql GET DIAGNOSTICS CONDITION 1
-                :ReturnedSQLCode = DB2_RETURNED_SQLCODE,
-                :ReturnedSQLState = RETURNED_SQLSTATE,
-                :MessageText = MESSAGE_TEXT,
-                :MessageId = DB2_MESSAGE_ID,
-                :MessageId1 = DB2_MESSAGE_ID1,
-                :MessageId2 = DB2_MESSAGE_ID2;
-
-        DSPLY ('SQLCode: ' + ReturnedSQLCode);
-        DSPLY ('SQLState: ' + ReturnedSQLState);
-        DSPLY ('Error ID: ' + %Trim(MessageId));
-        DSPLY ('Error ID1: ' + %Trim(MessageId1));
-        DSPLY ('Error ID2: ' + %Trim(MessageId2));
-
-        // Affichage du message par morceaux de 52 caractères
-        MessageLength = %Len(%Trim(MessageText));
-        StartPos = 1;
-
-        DoW StartPos <= MessageLength;
-            If (MessageLength - StartPos + 1) > 52;
-                MessagePart = %SubSt(MessageText:StartPos:52);
-            Else;
-                MessagePart = %SubSt(MessageText:StartPos:
-                                    MessageLength - StartPos + 1);
-            EndIf;
-            
-            If StartPos = 1;
-                DSPLY ('Error Message:');
-            EndIf;
-            DSPLY (%Trim(MessagePart));
-            
-            StartPos += 52;
-        EndDo;
-
-    EndIf;
-End-Proc;
-
-
-//                               Fenetre services & utilisateurs
-
-///
-// Appel de la fenêtre utilisateur
-// - Appel de la fenêtre utilisateur (par 'F2')
-///
-
-Dcl-Proc AffichageFenetreUtilisateur ;
-    Dcl-Pi *n;
-        CodeVerbe Char(3);
-        CodeObjet Char(5);
-    End-Pi;
-
-    PR_GOAFENCL(CodeVerbe
-         :CodeObjet);
-End-Proc;
-
-
-///
-// Appel du menu de services
-// - Appel du menu de services (par 'F6')
-///
-
-Dcl-Proc AffichageFenetreServices ;
-    PR_GOASER();
-End-Proc;
-
-
-
-///
-// Get Code société
-// La procédure renvoi le code société
-//
-///
-
-Dcl-Proc GetCodeSociete;
-    Dcl-Pi *n Char(20);
-
-    End-Pi;
-
-    Dcl-S CodeSocieteReturn Char(20);
-    Dcl-C TABLE_CHARTREUSE_SOCIETE 'STE';
-
-
-    Exec SQL
-            Select SUBSTR(XCOARG, 1, 2)
-                Into :CodeSocieteReturn
-                FROM VPARAM
-                WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE;
-    If SQLCode <> 0;
-        GestionErreurSQL();
-        CodeSocieteReturn = *ALL'?';
-    EndIf;
-
-    Return CodeSocieteReturn;
 End-Proc;
