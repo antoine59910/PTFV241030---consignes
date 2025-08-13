@@ -1,9 +1,11 @@
 **free
 Ctl-opt Option(*srcstmt:*nodebugio) AlwNull(*usrctl) UsrPrf(*owner)
-        DatFmt(*iso) TimFmt(*hms) dftactgrp(*no);
+        DatFmt(*iso) TimFmt(*hms) dftactgrp(*no) 
+        text('Programme de suivi des livraisons de consignes');
 
+// %Text('Programme de suivi des livraisons de consignes')
 // Appel ligne de commande :
-// CALL PGM(KCOP10) PARM((GER  (*CHAR 4)) (LIVCON (*CHAR 6))
+// CALL PGM(PTFV241030/KCOP10) PARM((GER  (*CHAR 4)) (LIVCON (*CHAR 6))
 //  ('Gestion livraison consignes' (*CHAR 30)))
 
 ///
@@ -135,8 +137,8 @@ End-Ds;
 Dcl-S NombreTotalLignesSF Packed(4:0);
 Dcl-S Fin ind;
 Dcl-S Refresh ind;
-Dcl-S FinCreation Ind Inz(*Off);
-Dcl-S BlocageUtilisateur char(10);
+Dcl-S finSaisieCreation Ind Inz(*Off);
+Dcl-S utilisateurBloquant char(10);
 Dcl-S CodeActionVerrouillage char(1);
 Dcl-S CodeSociete char(2);
 
@@ -243,12 +245,12 @@ DoW not Fin;
             //Initialisation du numéro de livraison
             EcranCreationLivraisonNumero = 0;
             //Affichage fenetre création d une nouvelle livraison
-            FinCreation = *Off;
-            DoW not FinCreation;
+            finSaisieCreation = *Off;
+            DoW not finSaisieCreation;
                 EXFMT ECREAT;
                 Select;
                     When fichierDS.touchePresse = F12;
-                        FinCreation = *On;
+                        finSaisieCreation = *On;
 
                     When fichierDS.touchePresse = ENTREE;
                         If VerificationCreation(EcranCreationLivraisonNumero);
@@ -269,7 +271,7 @@ DoW not Fin;
                                 DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
                             endmon;
 
-                            FinCreation = *On;
+                            finSaisieCreation = *On;
 
                         EndIf;
 
@@ -280,16 +282,16 @@ DoW not Fin;
         
        //Nouvelle création de retour
         When fichierDS.touchePresse = F10;
-            FinCreation = *Off;
+            finSaisieCreation = *Off;
             WindowCodeClient = *BLANKS;
             WindowDateRetour = *LOVAL;
             Indicateur.MasquerMessageErreurWindow = *On;
     
-            DoW not FinCreation;
+            DoW not finSaisieCreation;
                 EXFMT ECREAR;
                 Select;
                     When fichierDS.touchePresse = F12;
-                        FinCreation = *On;
+                        finSaisieCreation = *On;
 
                     When fichierDS.touchePresse = ENTREE;
                         If VerificationCreationRetour(WindowCodeClient : WindowDateRetour);
@@ -315,7 +317,7 @@ DoW not Fin;
                             endmon;
 
                             // Fin 
-                            FinCreation = *On;
+                            finSaisieCreation = *On;
                             Refresh = *On;
                         EndIf;
             
@@ -589,7 +591,7 @@ Dcl-Proc Verification;
     Dcl-S Rang Zoned(2:0);
     Dcl-S SauvegardeAction Char(1);
     Dcl-S VerificationReturn Ind Inz(*On);
-    Dcl-S r_TopRetour Char(1);
+    Dcl-S retourDejaEffectueChar(1);
 
     // Initialisations
     Indicateur.MasquerMessageErreur = *On;
@@ -617,12 +619,12 @@ Dcl-Proc Verification;
             // Vérification du blocage des livraisons
             If VerificationReturn = *On 
             and ECRANLIGNEACTION <> CODE_ACTION_VISUALISER;
-                BlocageUtilisateur = VerificationBlocage(ECRANLIGNENUMEROLIVRAISON);
-                If (BlocageUtilisateur <> *BLANKS);
+                utilisateurBloquant = VerificationBlocage(ECRANLIGNENUMEROLIVRAISON);
+                If (utilisateurBloquant <> *BLANKS);
                     VerificationReturn = *Off;
                     ECRANMESSAGEERREUR='LIV:' 
                     + %EDITC(ECRANLIGNENUMEROLIVRAISON:'Z') 
-                    + ' bloq par ' + BlocageUtilisateur;
+                    + ' bloq par ' + utilisateurBloquant;
                     Indicateur.MasquerMessageErreur = *Off;
                 Else;
 
@@ -641,11 +643,11 @@ Dcl-Proc Verification;
                             INTO :r_TopRetour, :KCOP11_p.NumeroLivraison
                             FROM KCOENT
                             WHERE NumeroBLConsignes = :ECRANLIGNENUMEROBLCONSIGNE;
-                        If SQLCode = 0 and r_TopRetour = 'N';
+                        If SQLCode = 0 and retourDejaEffectue= 'N';
                             KCOP11_p.Operation = LIVRAISON;
                             KCOP11_p.Mode = MODIFICATION;
                             CodeActionVerrouillage = CODE_ACTION_MODIFIER_LIVRAISON;
-                        Elseif SQLCode = 0 and r_TopRetour = 'O';
+                        Elseif SQLCode = 0 and retourDejaEffectue= 'O';
                             EcranMessageErreur = 'ERREUR: Retour déjà saisi'; 
                             EcranMessageInfo = ' Modification livraison impossible'; 
                             Indicateur.MasquerMessageErreur = *Off;
@@ -669,10 +671,10 @@ Dcl-Proc Verification;
                             INTO :r_TopRetour, :KCOP11_p.NumeroLivraison
                             FROM KCOENT
                             WHERE NumeroBLConsignes = :ECRANLIGNENUMEROBLCONSIGNE;
-                        If SQLCode = 0 and r_TopRetour = 'N';
+                        If SQLCode = 0 and retourDejaEffectue= 'N';
                             KCOP11_p.Mode = CREATION;
                             CodeActionVerrouillage = CODE_ACTION_RETOUR;
-                        Elseif SQLCode = 0 and r_TopRetour = 'O';
+                        Elseif SQLCode = 0 and retourDejaEffectue= 'O';
                             KCOP11_p.Mode = MODIFICATION;
                             CodeActionVerrouillage = CODE_ACTION_RETOUR;
                         Else;
@@ -772,10 +774,10 @@ Dcl-Proc VerificationCreation;
         //On vérifie qu'un utilisateur n'est pas en création
         NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
 
-        BlocageUtilisateur = VerificationBlocage(NumeroCreationBLConsignes);
-        If (BlocageUtilisateur <> *BLANKS);
+        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
+        If (utilisateurBloquant <> *BLANKS);
             Erreur = *On;
-            WINDOWMESSAGEERREUR='bloqué par ' + BlocageUtilisateur;
+            WINDOWMESSAGEERREUR='bloqué par ' + utilisateurBloquant;
             Indicateur.MasquerMessageErreurWindow = *Off;
         EndIf;
     EndIf;
@@ -861,10 +863,10 @@ Dcl-Proc VerificationCreationRetour;
         // Vérification qu'un utilisateur n'est pas en création
         NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
         
-        BlocageUtilisateur = VerificationBlocage(NumeroCreationBLConsignes);
-        If (BlocageUtilisateur <> *BLANKS);
+        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
+        If (utilisateurBloquant <> *BLANKS);
             Erreur = *On;
-            WINDOWMESSAGEERREUR = 'Bloqué par ' + BlocageUtilisateur;
+            WINDOWMESSAGEERREUR = 'Bloqué par ' + utilisateurBloquant;
             Indicateur.MasquerMessageErreurWindow = *Off;
         EndIf;
     EndIf;
@@ -882,7 +884,7 @@ End-Proc;
 ///
 Dcl-Proc VerificationBlocage;
     Dcl-Pi *n char(10);
-        p_NumeroCreationBLConsignes packed(8:0);
+        p_numeroBLConsignes packed(8:0);
     End-Pi;
 
     Dcl-S r_userBlocage char(10) Inz(*Blanks);
@@ -892,7 +894,7 @@ Dcl-Proc VerificationBlocage;
         Select Utilisateur
         Into :r_userBlocage
         From KCOF10
-        Where NumeroBLConsignes = :p_NumeroCreationBLConsignes 
+        Where NumeroBLConsignes = :p_numeroBLConsignes 
                 And LockFlag = '1';
     If (SqlCode = 100); // Pas de résultat trouvé
         r_userBlocage = *BLANKS; // La livraison nest pas verrouillée

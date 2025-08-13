@@ -268,7 +268,7 @@ End-Ds;
 // Paramètres
 Dcl-Pi *N;
     // entrées
-    £NumeroBLConsignes                         Packed(8:0);//Numéro du bon de livraison de consignes
+    £NumeroBLConsignes                      Packed(8:0);//Numéro du bon de livraison de consignes
     £Operation                              Char(30);
     £Mode                                   Char(30);
     // Facultatif : Numéro de la livraison associée à la livraison/retour de consignes
@@ -321,7 +321,7 @@ DoW not Fin;
                     When EcranFinChoixAction = 1 AND EcranFinChoix1 <> '*';
                         If Verification();
                             EcritureTables();
-                                //Gestion de l édition du PRTF
+                            //Gestion de l édition du PRTF
                             If £Operation = LIVRAISON And (£Mode=MODIFICATION OR £Mode=CREATION);
                                 EditionPRTF();
                             EndIf;
@@ -1018,7 +1018,7 @@ Dcl-Proc EcritureTables;
                         :p_EcritureKCOCUM.AncienneQuantiteLivree
                         :p_EcritureKCOCUM.AncienneQuantiteRetournee);
 
-                    // --- CREATION LIVRAISON KCOLIG
+                // --- CREATION LIVRAISON KCOLIG
                 NEW_KCOLIG.CodeArticle = EcranLigneCodeArticle;
                 NEW_KCOLIG.QuantiteLivree = EcranLigneQuantiteLivree;
                 NEW_KCOLIG.QuantiteRetournee = EcranLigneQuantiteRetournee;
@@ -1823,8 +1823,8 @@ Dcl-Proc EcritureKCOCUM;
                                 + NEW_KCOCUM.QuantiteCumulEcart;
     EndIf;
 
-//INSERTION/MISE A JOUR DE LA TABLE
-// Insertion d une nouvelle ligne        
+    //INSERTION/MISE A JOUR DE LA TABLE
+    // Insertion d une nouvelle ligne        
     If Not KCOCUMExiste;
         Exec SQL
             INSERT INTO KCOCUM (
@@ -1966,7 +1966,6 @@ End-Proc;
 // Gestion des erreurs SQL
 // Affiche à l écran s il y a une erreur SQL
 ///
-
 Dcl-Proc GestionErreurSQL ;
 
     Dcl-S MessageId         Char(10) ;
@@ -2028,7 +2027,6 @@ End-Proc;
 
 ///
 // GetEnteteSociete()
-
 // Récupération des entêtes de sociétés
 // TABVV ZDSXX
 // pi : Code racine
@@ -2125,8 +2123,6 @@ Dcl-Proc GetPrixUnitaireArticle;
     VMRPUT.UCOCLI = p_CodeClient;       // Code client
     VMRPUT.UCOART = p_CodeArticle;      // Code article
     VMRPUT.UQTCDE = p_Quantite;         // Quantité 
-    
-    
 
     //Récupération du code regroupement de l article
     exec SQL
