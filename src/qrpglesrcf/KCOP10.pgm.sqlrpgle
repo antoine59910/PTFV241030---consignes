@@ -2,13 +2,13 @@
 Ctl-opt Option(*srcstmt:*nodebugio) AlwNull(*usrctl) UsrPrf(*owner)
         DatFmt(*iso) TimFmt(*hms) dftactgrp(*no)
         text('Programme de suivi des livraisons de consignes')
-        bnddir('SPPVALSNEW/UTILS':'SPPVALSNEW/SRVPGM');
+        bnddir('SRVPGM/UTILS':'SRVPGM/SERVICES');
 
 // %Text('Programme de suivi des livraisons de consignes')
 // Appel ligne de commande :
 // CALL PGM(PTFV241030/KCOP10) PARM('GER' 'LIVCON' 'Gestion livraison consignes')
 
-///
+//
 // --------------------------------------------------------------
 //       NOM        : KCOP10              TYPE : Interactif
 //
@@ -56,7 +56,7 @@ Ctl-opt Option(*srcstmt:*nodebugio) AlwNull(*usrctl) UsrPrf(*owner)
 //  ECRIT DU   : 11/11/2024            PAR : ANg (Antilles Glaces)
 //        AU   : 29/11/2024
 //
-/// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 // Déclaration fichier
 
@@ -131,11 +131,13 @@ End-Pr;
 Dcl-Pr GetCodeSociete char(20) extproc('GETCODESOCIETE');
 End-Pr;
 
+Dcl-Pr GetLibelleSociete char(26) extproc('GETLIBELLESOCIETE');
+End-Pr;
+
 // --- Variables -------------------------------------------------------
 Dcl-S NombreTotalLignesSF Packed(4:0);
 Dcl-S Fin ind;
 Dcl-S Refresh ind;
-Dcl-S finSaisieCreation Ind Inz(*Off);
 Dcl-S utilisateurBloquant char(10);
 Dcl-S CodeActionVerrouillage char(1);
 Dcl-S CodeSociete char(2);
@@ -151,7 +153,6 @@ Dcl-C CODE_ACTION_MODIFIER_LIVRAISON 'L';
 Dcl-C CODE_ACTION_RETOUR 'R';
 Dcl-C CODE_ACTION_VISUALISER 'V';
 Dcl-C TABVV_PARAMETRESCONSIGNE 'XCOPAR';
-
 
 // --- Tables -------------------------------------------------------
 // Tables des entêtes de livraisons
@@ -236,99 +237,13 @@ Dow not Fin;
 
             // Nouvelle création de livraison
         When fichierDS.touchePresse = F9;
-
-            // Initialisation du numéro de livraison
-            EcranCreationLivraisonNumero = 0;
-
-            // Affichage fenetre création d une nouvelle livraison
-            finSaisieCreation = *Off;
-            Dow not finSaisieCreation;
-                EXFMT ECREAT;
-                Select;
-                    When fichierDS.touchePresse = F12;
-                        finSaisieCreation = *On;
-
-                    When fichierDS.touchePresse = ENTREE;
-                        If VerificationCreation(EcranCreationLivraisonNumero);
-                            
-                            // Si vérification OK : Appel du programme de saisie KCOP11
-                            KCOP11_p.NumBLConsignes = 
-                                %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
-                            CodeActionVerrouillage = CODE_ACTION_CREATION_LIVRAISON;
-                            VerrouillageLivraison(KCOP11_p.NumBLConsignes
-                                                :CodeActionVerrouillage);
-                            Monitor;
-                                KCOP11(KCOP11_p.NumBLConsignes
-                                :LIVRAISON
-                                :CREATION
-                                :EcranCreationLivraisonNumero);
-                                DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            On-Error ;
-                                dsply 'Erreur pendant execution de KCOP11';
-                                DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            Endmon;
-
-                            finSaisieCreation = *On;
-
-                        Endif;
-
-                    Other;
-                Endsl;
-            Enddo;
+            CreationLivraison();
             Refresh = *On;
         
             // Nouvelle création de retour
         When fichierDS.touchePresse = F10;
-            finSaisieCreation = *Off;
-            WindowCodeClient = *BLANKS;
-            WindowDateRetour = *LOVAL;
-            Indicateur.MasquerMessageErreurWindow = *On;
-    
-            Dow not finSaisieCreation;
-                EXFMT ECREAR;
-                Select;
-                    When fichierDS.touchePresse = F12;
-                        finSaisieCreation = *On;
-
-                    When fichierDS.touchePresse = ENTREE;
-                        If VerificationCreationRetour(WindowCodeClient : WindowDateRetour);
-                            // Si vérification OK : Création du BL de consignes
-                            KCOP11_p.NumBLConsignes = 
-                        %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
-                    
-                            // Verrouillage de la livraison
-                            CodeActionVerrouillage = CODE_ACTION_RETOUR;
-                            VerrouillageLivraison(KCOP11_p.NumBLConsignes
-                                        : CodeActionVerrouillage);
-                            // Appel du programme de saisie KCOP11 pour un retour sans livraison
-                            Monitor;
-                                KCOP11(KCOP11_p.NumBLConsignes
-                                : RETOUR
-                                : CREATION
-                                : 0
-                                : WindowCodeClient);
-                                DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            On-Error;
-                                dsply 'Erreur pendant execution de KCOP11';
-                                DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
-                            Endmon;
-
-                            // Fin 
-                            finSaisieCreation = *On;
-                            Refresh = *On;
-                        Endif;
-            
-                    When fichierDS.touchePresse = F4;
-                        Select;
-                            When (ECREARZoneCurseur = 'ECRRET');
-                                WindowCodeClient =  
-                                    RechercheMulticriteresClient(CodeSociete:WindowCodeClient);
-                            Other;
-                        Endsl;
-
-                    Other;
-                Endsl;
-            Enddo;
+            CreationRetour();
+            Refresh = *On;
 
         When fichierDS.TouchePresse = F12;
             Fin=*On;
@@ -343,10 +258,6 @@ Dow not Fin;
                 If KCOP11_p.NumBLConsignes <> 0;
                     VerrouillageLivraison(KCOP11_p.NumBLConsignes:CodeActionVerrouillage);
                     Monitor;
-                        // dsply ('NumBLConsignes : '+ %char(KCOP11_p.NumBLConsignes));
-                        // dsply ('Operation : '+ KCOP11_p.Operation);
-                        // dsply ('Mode : '+ KCOP11_p.Mode);
-                        // dsply ('NumeroLivraison : '+ %char(KCOP11_p.NumeroLivraison));
                         KCOP11(KCOP11_p.NumBLConsignes
                             :KCOP11_p.Operation
                             :KCOP11_p.Mode
@@ -382,9 +293,8 @@ Enddo;
 
 ///
 // InitialisationProgramme()
-// 
-// 1. Purge du fichier des blocages pour les blocages antérieurs à la veille
-// 2. Initialisation des variables de l'écran
+// - Purge du fichier des blocages pour les blocages antérieurs à la veille
+// - Initialisation des variables de l'écran
 ///
 Dcl-Proc InitialisationProgramme;
     Dcl-Pi *N;
@@ -418,7 +328,6 @@ Dcl-Proc InitialisationProgramme;
     // Sinon bug dans la requete SQL car il compare avec la date '0001-01-01' qui n'existe pas en SQL
     ECRANNUMEROBLCONSIGNES = 0;
     ECRANDESIGNATIONCLIENTFILTRE = *BLANKS;
-
 
     // 3 . Récupération du code société
     CodeSociete = GetCodeSociete();
@@ -697,179 +606,10 @@ Dcl-Proc Verification;
 End-Proc;
 
 ///
-// VerificationCreation
-// Vérifie les conditions nécessaires pour la création d une nouvelle livraison 
-//  1 - On vérifie que la livraison existe dans VENTLV
-//  2 - On vérifie que la livraison n existe pas déjà dans KCOENT
-//  3 - On vérifie que quelqu'un n'est pas entrain de créer en même temps
-// @param p_NumeroLivraisonCreation - Numéro de la livraison à vérifier
-// @return *On si la création est possible, *Off si elle ne peut pas être effectuée
-///
-Dcl-Proc VerificationCreation;
-    Dcl-Pi *n Ind;
-        p_NumeroLivraisonCreation Packed(8:0);
-    End-Pi;
-
-    Dcl-S Erreur Ind Inz(*Off);
-    Dcl-S Compteur Packed(10:0);
-    Dcl-S NumeroCreationBLConsignes packed(8:0);
-    
-    Indicateur.MasquerMessageErreurWindow = *On;
-
-    // 1 - On vérifie que la livraison existe dans VENTLV
-    If not Erreur;
-        Exec SQL
-            select COUNT(ENULIV)
-            Into :Compteur
-            FROM VENTLV
-            Where ENULIV = :p_NumeroLivraisonCreation;
-        GestionErreurSQL(sqlcode);
-        If Compteur = 0;
-            Erreur = *On;
-            WINDOWMESSAGEERREUR='LIV : ' 
-            + %EDITC(p_NumeroLivraisonCreation:'Z') 
-            + ' inexistante';
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Endif;
-    Endif;
-
-    // 2 - On vérifie que la livraison n existe pas déjà dans KCOENT
-    If not Erreur;
-        Exec SQL
-            select COUNT(NumeroLivraison)
-            Into :Compteur
-            FROM KCOENT
-            Where NumeroLivraison = :p_NumeroLivraisonCreation;
-        GestionErreurSQL(sqlcode);
-        If Compteur > 0;
-            Erreur = *On;
-            WINDOWMESSAGEERREUR='LIV : ' 
-            + %EDITC(p_NumeroLivraisonCreation:'Z') 
-            + ' déjà créée';
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Endif;
-    Endif;
-
-    // 3 - On vérifie que quelqu'un n'est pas entrain de créer en même temps
-    If not Erreur;
-        // Récupération des paramètres consignes : 
-        Exec SQL
-            Select XLIPAR
-            Into :ParametresConsigne.XLIPAR
-            FROM VPARAM
-            Where XCORAC = :TABVV_PARAMETRESCONSIGNE;
-        GestionErreurSQL(sqlcode);
-
-        // On vérifie qu'un utilisateur n'est pas en création
-        NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
-
-        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
-        If (utilisateurBloquant <> *BLANKS);
-            Erreur = *On;
-            WINDOWMESSAGEERREUR='bloqué par ' + utilisateurBloquant;
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Endif;
-    Endif;
-
-    Return not Erreur;
-End-Proc;
-
-///
-// VerificationCreationRetour
-// Vérifie que les informations entrées dans l'écran de création retour sont correctes
-// - Le code client doit exister
-// - Il ne doit pas y avoir de création en cours
-// - La date doit être inférieure ou égale à la date du jour
-// - La date ne doit pas être la date par défaut (*LOVAL)
-//
-// @param p_CodeClient - Code du client à vérifier
-// @param p_DateRetour - Date du retour à vérifier
-//
-// @return *On si la création est possible, *Off sinon
-///
-Dcl-Proc VerificationCreationRetour;
-    Dcl-Pi *n Ind;
-        p_CodeClient Char(9);
-        p_DateRetour Date;
-    End-Pi;
-
-    Dcl-S Erreur Ind Inz(*Off);
-    Dcl-S Compteur Packed(10:0);
-    Dcl-S NumeroCreationBLConsignes packed(8:0);
-    Dcl-S DateJour Date;
-    
-    // Masquage des messages d'erreur précédents
-    Indicateur.MasquerMessageErreurWindow = *On;
-
-    // 1 - Vérification que le code client existe
-    If not Erreur and p_CodeClient <> *Blanks;
-        Exec SQL
-            SELECT COUNT(*)
-            INTO :Compteur
-            FROM CLIENT
-            WHERE CCOCLI = :p_CodeClient;
-        GestionErreurSQL(sqlcode);
-        
-        If Compteur = 0;
-            Erreur = *On;
-            WINDOWMESSAGEERREUR = 'Client ' + %Trim(p_CodeClient) + ' inexistant';
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Endif;
-    Elseif not Erreur and p_CodeClient = *Blanks;
-        Erreur = *On;
-        WINDOWMESSAGEERREUR = 'Code client obligatoire';
-        Indicateur.MasquerMessageErreurWindow = *Off;
-    Endif;
-    
-    // 2 - Vérification de la date
-    If not Erreur;
-        // La date doit être renseignée (pas la date par défaut)
-        If p_DateRetour = *Loval;
-            Erreur = *On;
-            WINDOWMESSAGEERREUR = 'Date retour obligatoire';
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Else;
-            // La date ne doit pas être postérieure à la date du jour
-            DateJour = %Date();
-            If p_DateRetour > DateJour;
-                Erreur = *On;
-                WINDOWMESSAGEERREUR = 'Date retour > date du jour';
-                Indicateur.MasquerMessageErreurWindow = *Off;
-            Endif;
-        Endif;
-    Endif;
-    
-    // 3 - Vérification qu'il n'y a pas une création en cours
-    If not Erreur;
-        // Récupération des paramètres consignes
-        Exec SQL
-            SELECT XLIPAR
-            INTO :ParametresConsigne.XLIPAR
-            FROM VPARAM
-            WHERE XCORAC = :TABVV_PARAMETRESCONSIGNE;
-        GestionErreurSQL(sqlcode);
-        
-        // Vérification qu'un utilisateur n'est pas en création
-        NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
-        
-        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
-        If (utilisateurBloquant <> *BLANKS);
-            Erreur = *On;
-            WINDOWMESSAGEERREUR = 'Bloqué par ' + utilisateurBloquant;
-            Indicateur.MasquerMessageErreurWindow = *Off;
-        Endif;
-    Endif;
-    
-    Return not Erreur;
-End-Proc;
-
-///
 // VerificationBlocage
 // Permet de vérifier si un utilisateur utilise déjà la livraison en création/modification
-//
 // @param numero de Livraison 
-//
-// @return Utilisateur qui bloque la livraison (*BLANKS si rien)
+// @return Utilisateur qui bloque la livraison (BLANKS si rien)
 ///
 Dcl-Proc VerificationBlocage;
     Dcl-Pi *n char(10);
@@ -983,39 +723,279 @@ Dcl-Proc DeverrouillageLivraison;
 End-Proc;
 
 
-// ----------------------------------------------------------------------------
-//
-//                                 SERVICES
-//                  Réutilisable dans d autres programmes
-//
-// -----------------------------------------------------------------------------
-
 ///
-// GET libellé société
-// La procédure renvoie le libellé de la société en fonction de son code
-// TABVV : STE
+// CreationLivraison
 //
-// @return Libellé de la société si erreur renvoi ALL?
 ///
-
-Dcl-Proc GetLibelleSociete ;
-    Dcl-Pi *n Char(20);
-
+Dcl-Proc CreationLivraison ;
+    Dcl-Pi *n ;
     End-Pi;
 
-    Dcl-S LibelleSocieteReturn Char(20);
-    Dcl-C TABLE_CHARTREUSE_SOCIETE 'STE';
+    Dcl-S finSaisieCreation Ind Inz(*Off);
 
+    // Initialisation du numéro de livraison
+    EcranCreationLivraisonNumero = 0;
 
-    Exec SQL
-            Select SUBSTR(XLIPAR, 1, 20)
-                Into :LibelleSocieteReturn
-                FROM VPARAM
-                WHERE XCORAC = :TABLE_CHARTREUSE_SOCIETE;
-    If SQLCode <> 0;
+    // Affichage fenetre création d une nouvelle livraison
+    finSaisieCreation = *Off;
+    Dow not finSaisieCreation;
+        EXFMT ECREAT;
+        Select;
+            When fichierDS.touchePresse = F12;
+                finSaisieCreation = *On;
+
+            When fichierDS.touchePresse = ENTREE;
+                If VerificationCreation(EcranCreationLivraisonNumero);
+                            
+                    // Si vérification OK : Appel du programme de saisie KCOP11
+                    KCOP11_p.NumBLConsignes = 
+                                %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
+                    CodeActionVerrouillage = CODE_ACTION_CREATION_LIVRAISON;
+                    VerrouillageLivraison(KCOP11_p.NumBLConsignes
+                                                :CodeActionVerrouillage);
+                    Monitor;
+                        KCOP11(KCOP11_p.NumBLConsignes
+                                :LIVRAISON
+                                :CREATION
+                                :EcranCreationLivraisonNumero);
+
+                    On-Error ;
+                        dsply 'Erreur pendant execution de KCOP11';
+                        DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
+                    Endmon;
+
+                    DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
+                    finSaisieCreation = *On;
+                Endif;
+
+            Other;
+        Endsl;
+    Enddo;
+End-Proc;
+
+///
+// VerificationCreation
+// Vérifie les conditions nécessaires pour la création d une nouvelle livraison 
+//  1 - On vérifie que la livraison existe dans VENTLV
+//  2 - On vérifie que la livraison n existe pas déjà dans KCOENT
+//  3 - On vérifie que quelqu'un n'est pas entrain de créer en même temps
+// @param p_NumeroLivraisonCreation - Numéro de la livraison à vérifier
+// @return *On si la création est possible, *Off si elle ne peut pas être effectuée
+///
+Dcl-Proc VerificationCreation;
+    Dcl-Pi *n Ind;
+        p_NumeroLivraisonCreation Packed(8:0);
+    End-Pi;
+
+    Dcl-S Erreur Ind Inz(*Off);
+    Dcl-S Compteur Packed(10:0);
+    Dcl-S NumeroCreationBLConsignes packed(8:0);
+    
+    Indicateur.MasquerMessageErreurWindow = *On;
+
+    // 1 - On vérifie que la livraison existe dans VENTLV
+    If not Erreur;
+        Exec SQL
+            select COUNT(ENULIV)
+            Into :Compteur
+            FROM VENTLV
+            Where ENULIV = :p_NumeroLivraisonCreation;
         GestionErreurSQL(sqlcode);
-        LibelleSocieteReturn = *ALL'?';
+        If Compteur = 0;
+            Erreur = *On;
+            WINDOWMESSAGEERREUR='LIV : ' 
+            + %EDITC(p_NumeroLivraisonCreation:'Z') 
+            + ' inexistante';
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Endif;
     Endif;
 
-    Return LibelleSocieteReturn;
+    // 2 - On vérifie que la livraison n existe pas déjà dans KCOENT
+    If not Erreur;
+        Exec SQL
+            select COUNT(NumeroLivraison)
+            Into :Compteur
+            FROM KCOENT
+            Where NumeroLivraison = :p_NumeroLivraisonCreation;
+        GestionErreurSQL(sqlcode);
+        If Compteur > 0;
+            Erreur = *On;
+            WINDOWMESSAGEERREUR='LIV : ' 
+            + %EDITC(p_NumeroLivraisonCreation:'Z') 
+            + ' déjà créée';
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Endif;
+    Endif;
+
+    // 3 - On vérifie que quelqu'un n'est pas entrain de créer en même temps
+    If not Erreur;
+        // Récupération des paramètres consignes : 
+        Exec SQL
+            Select XLIPAR
+            Into :ParametresConsigne.XLIPAR
+            FROM VPARAM
+            Where XCORAC = :TABVV_PARAMETRESCONSIGNE;
+        GestionErreurSQL(sqlcode);
+
+        // On vérifie qu'un utilisateur n'est pas en création
+        NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
+
+        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
+        If (utilisateurBloquant <> *BLANKS);
+            Erreur = *On;
+            WINDOWMESSAGEERREUR='bloqué par ' + utilisateurBloquant;
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Endif;
+    Endif;
+
+    Return not Erreur;
+End-Proc;
+
+///
+// Creation Retour
+// Permet la création d'un retour de livraison sans avoir fait de livraison
+///
+Dcl-Proc CreationRetour;
+    Dcl-Pi *n ;
+    End-Pi;
+
+    Dcl-S finSaisie ind Inz(*Off);
+
+    WindowCodeClient = *BLANKS;
+    WindowDateRetour = *LOVAL;
+    Indicateur.MasquerMessageErreurWindow = *On;
+    
+    Dow not finSaisie;
+        EXFMT ECREAR;
+        Select;
+            When fichierDS.touchePresse = F12;
+                finSaisie = *On;
+
+            When fichierDS.touchePresse = ENTREE;
+                If VerificationCreationRetour(WindowCodeClient : WindowDateRetour);
+                    // Si vérification OK : Création du BL de consignes
+                    KCOP11_p.NumBLConsignes = 
+                            %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
+                    
+                    // Verrouillage de la livraison
+                    CodeActionVerrouillage = CODE_ACTION_RETOUR;
+                    VerrouillageLivraison(KCOP11_p.NumBLConsignes
+                                        : CodeActionVerrouillage);
+                    // Appel du programme de saisie KCOP11 pour un retour sans livraison
+                    Monitor;
+                        KCOP11(KCOP11_p.NumBLConsignes
+                                : RETOUR
+                                : CREATION
+                                : 0
+                                : WindowCodeClient);
+                        DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
+                    On-Error;
+                        dsply 'Erreur pendant execution de KCOP11';
+                        DeverrouillageLivraison(KCOP11_p.NumBLConsignes);
+                    Endmon;
+
+                    // Fin 
+                    finSaisie = *On;
+                Endif;
+            
+            When fichierDS.touchePresse = F4;
+                Select;
+                    When (ECREARZoneCurseur = 'ECRRET');
+                        WindowCodeClient =  
+                                    RechercheMulticriteresClient(CodeSociete:WindowCodeClient);
+                    Other;
+                Endsl;
+
+            Other;
+        Endsl;
+    Enddo;
+End-Proc;
+
+///
+// VerificationCreationRetour
+// Vérifie que les informations entrées dans l'écran de création retour sont correctes
+// - Le code client doit exister
+// - Il ne doit pas y avoir de création en cours
+// - La date doit être inférieure ou égale à la date du jour
+// - La date ne doit pas être la date par défaut (*LOVAL)
+//
+// @param p_CodeClient - Code du client à vérifier
+// @param p_DateRetour - Date du retour à vérifier
+//
+// @return *On si la création est possible, *Off sinon
+///
+Dcl-Proc VerificationCreationRetour;
+    Dcl-Pi *n Ind;
+        p_CodeClient Char(9);
+        p_DateRetour Date;
+    End-Pi;
+
+    Dcl-S Erreur Ind Inz(*Off);
+    Dcl-S Compteur Packed(10:0);
+    Dcl-S NumeroCreationBLConsignes packed(8:0);
+    Dcl-S DateJour Date;
+    
+    // Masquage des messages d'erreur précédents
+    Indicateur.MasquerMessageErreurWindow = *On;
+
+    // 1 - Vérification que le code client existe
+    If not Erreur and p_CodeClient <> *Blanks;
+        Exec SQL
+            SELECT COUNT(*)
+            INTO :Compteur
+            FROM CLIENT
+            WHERE CCOCLI = :p_CodeClient;
+        GestionErreurSQL(sqlcode);
+        
+        If Compteur = 0;
+            Erreur = *On;
+            WINDOWMESSAGEERREUR = 'Client ' + %Trim(p_CodeClient) + ' inexistant';
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Endif;
+    Elseif not Erreur and p_CodeClient = *Blanks;
+        Erreur = *On;
+        WINDOWMESSAGEERREUR = 'Code client obligatoire';
+        Indicateur.MasquerMessageErreurWindow = *Off;
+    Endif;
+    
+    // 2 - Vérification de la date
+    If not Erreur;
+        // La date doit être renseignée (pas la date par défaut)
+        If p_DateRetour = *Loval;
+            Erreur = *On;
+            WINDOWMESSAGEERREUR = 'Date retour obligatoire';
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Else;
+            // La date ne doit pas être postérieure à la date du jour
+            DateJour = %Date();
+            If p_DateRetour > DateJour;
+                Erreur = *On;
+                WINDOWMESSAGEERREUR = 'Date retour > date du jour';
+                Indicateur.MasquerMessageErreurWindow = *Off;
+            Endif;
+        Endif;
+    Endif;
+    
+    // 3 - Vérification qu'il n'y a pas une création en cours
+    If not Erreur;
+        // Récupération des paramètres consignes
+        Exec SQL
+            SELECT XLIPAR
+            INTO :ParametresConsigne.XLIPAR
+            FROM VPARAM
+            WHERE XCORAC = :TABVV_PARAMETRESCONSIGNE;
+        GestionErreurSQL(sqlcode);
+        
+        // Vérification qu'un utilisateur n'est pas en création
+        NumeroCreationBLConsignes = %dec(%trim(ParametresConsigne.CompteurBLConsignes):8:0) + 1;
+        
+        utilisateurBloquant = VerificationBlocage(NumeroCreationBLConsignes);
+        If (utilisateurBloquant <> *BLANKS);
+            Erreur = *On;
+            WINDOWMESSAGEERREUR = 'Bloqué par ' + utilisateurBloquant;
+            Indicateur.MasquerMessageErreurWindow = *Off;
+        Endif;
+    Endif;
+    
+    Return not Erreur;
 End-Proc;

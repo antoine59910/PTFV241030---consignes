@@ -1,55 +1,41 @@
 [
   {
     "name": "Create RPGLE Program",
-    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "command": "CRTBNDRPG PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": [
-      "RPGLE",
-      "RPG"
-    ]
+    "extensions": ["RPGLE", "RPG"]
   },
   {
     "name": "Create RPGLE Module",
-    "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
+    "command": "CRTRPGMOD MODULE(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') DBGVIEW(*SOURCE) TGTCCSID(*JOB)",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": [
-      "RPGLE"
-    ]
+    "extensions": ["RPGLE"]
   },
   {
     "name": "Create SQLRPGLE Program",
-    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)')",
+    "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)')",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": [
-      "SQLRPGLE"
-    ]
+    "extensions": ["SQLRPGLE"]
   },
   {
     "name": "Create SQLRPGLE Module",
     "command": "CRTSQLRPGI OBJ(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OBJTYPE(*MODULE) OPTION(*EVENTF) DBGVIEW(*SOURCE) CLOSQLCSR(*ENDMOD) CVTCCSID(*JOB) COMPILEOPT('TGTCCSID(*JOB)')",
     "deployFirst": true,
     "environment": "ile",
-    "extensions": [
-      "SQLRPGLE"
-    ]
+    "extensions": ["SQLRPGLE"]
   },
   {
-    "extensions": [
-      "CLP",
-      "CLLE"
-    ],
+    "extensions": ["CLP", "CLLE"],
     "name": "Create Bound CL Program",
     "command": "CRTBNDCL PGM(&CURLIB/&NAME) SRCSTMF('&RELATIVEPATH') OPTION(*EVENTF) DBGVIEW(*SOURCE)",
     "deployFirst": true,
     "environment": "ile"
   },
   {
-    "extensions": [
-      "SQL"
-    ],
+    "extensions": ["SQL"],
     "name": "Run SQL Statements (RUNSQLSTM)",
     "command": "RUNSQLSTM SRCSTMF('&FULLPATH') COMMIT(*NONE) NAMING(*SQL)",
     "deployFirst": true,
@@ -61,9 +47,7 @@
     "deployFirst": true,
     "type": "file",
     "name": "Create Display File (CRTDSPF)",
-    "extensions": [
-      "dspf"
-    ]
+    "extensions": ["dspf"]
   },
   {
     "command": "CRTPRTF FILE(&CURLIB/&NAME) SRCFILE(&SRCFILE) TEXT('DSPF from local')",
@@ -71,14 +55,10 @@
     "deployFirst": true,
     "type": "file",
     "name": "Create PRTF File (CRTPRTF)",
-    "extensions": [
-      "prtf"
-    ]
+    "extensions": ["prtf"]
   },
   {
-    "extensions": [
-      "GLOBAL"
-    ],
+    "extensions": ["GLOBAL"],
     "name": "Create Service Program (CRTSRVPGM)",
     "command": "CRTSRVPGM SRVPGM(&CURLIB/&NAME) EXPORT(*ALL) BNDSRVPGM(*NONE) BNDDIR(*NONE) ACTGRP(*CALLER)",
     "environment": "ile"
